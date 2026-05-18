@@ -148,6 +148,7 @@ rim-analysis inventory `
   - `scenario_results.json`
   - `scenario_results.csv`
   - `comparison_matrix.csv`
+  - `comparison_report.html`
 
 当前限制：
 
