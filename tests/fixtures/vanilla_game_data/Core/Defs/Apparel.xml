@@ -1,0 +1,40 @@
+<Defs>
+  <ThingDef ParentName="ApparelBase">
+    <defName>Apparel_TestVest</defName>
+    <label>test vest</label>
+    <apparel>
+      <layers>
+        <li>Middle</li>
+      </layers>
+      <bodyPartGroups>
+        <li>Torso</li>
+      </bodyPartGroups>
+    </apparel>
+    <statBases>
+      <ArmorRating_Sharp>1.0</ArmorRating_Sharp>
+      <ArmorRating_Blunt>0.36</ArmorRating_Blunt>
+      <ArmorRating_Heat>0.1</ArmorRating_Heat>
+    </statBases>
+  </ThingDef>
+
+  <ThingDef ParentName="ApparelBase">
+    <defName>Apparel_TestDuster</defName>
+    <label>test duster</label>
+    <apparel>
+      <layers>
+        <li>Shell</li>
+      </layers>
+      <bodyPartGroups>
+        <li>Torso</li>
+        <li>Arms</li>
+        <li>Legs</li>
+      </bodyPartGroups>
+    </apparel>
+    <statBases>
+      <ArmorRating_Sharp>0.28</ArmorRating_Sharp>
+      <ArmorRating_Blunt>0.08</ArmorRating_Blunt>
+      <ArmorRating_Heat>0.2</ArmorRating_Heat>
+    </statBases>
+  </ThingDef>
+</Defs>
+

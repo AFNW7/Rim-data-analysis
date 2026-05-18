@@ -1,0 +1,9 @@
+<Defs>
+  <ThingDef>
+    <defName>WorkshopThing</defName>
+  </ThingDef>
+  <IncidentDef>
+    <defName>WorkshopIncident</defName>
+  </IncidentDef>
+</Defs>
+

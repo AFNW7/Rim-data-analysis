@@ -1,0 +1,12 @@
+<Defs>
+  <ThingDef>
+    <defName>TestGun</defName>
+  </ThingDef>
+  <ThingDef>
+    <defName>TestTable</defName>
+  </ThingDef>
+  <ResearchProjectDef>
+    <defName>TestResearch</defName>
+  </ResearchProjectDef>
+</Defs>
+

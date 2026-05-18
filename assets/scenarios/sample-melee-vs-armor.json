@@ -1,0 +1,50 @@
+{
+  "name": "sample-melee-vs-armor",
+  "attacker": {
+    "name": "brawler-baseliner",
+    "shooting_skill": 2,
+    "melee_skill": 12,
+    "traits": ["brawler"],
+    "capacities": {
+      "sight": 1.0,
+      "manipulation": 1.0,
+      "moving": 1.0
+    }
+  },
+  "defender": {
+    "name": "nimble-target",
+    "shooting_skill": 5,
+    "melee_skill": 10,
+    "traits": ["nimble"],
+    "capacities": {
+      "sight": 1.0,
+      "manipulation": 1.0,
+      "moving": 1.0
+    },
+    "apparel": [
+      {
+        "name": "plate-armor-like",
+        "source": "sample",
+        "layers": ["Shell"],
+        "covers": ["Torso", "Arms", "Legs"],
+        "armor_sharp": 126,
+        "armor_blunt": 38,
+        "armor_heat": 16
+      }
+    ]
+  },
+  "weapon": {
+    "name": "uranium-mace-like",
+    "attack_mode": "melee",
+    "damage_type": "Blunt",
+    "damage": 18,
+    "armor_penetration": 27,
+    "cooldown_seconds": 2.0
+  },
+  "context": {
+    "target_body_region": "Torso",
+    "hit_chance_multiplier": 1.0,
+    "target_is_aiming_or_firing": false
+  }
+}
+

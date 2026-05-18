@@ -1,0 +1,58 @@
+<Defs>
+  <ThingDef ParentName="BaseHumanMakeableGun">
+    <defName>Gun_TestRifle</defName>
+    <label>test rifle</label>
+    <thingCategories>
+      <li>WeaponsRanged</li>
+    </thingCategories>
+    <weaponTags>
+      <li>RangedLight</li>
+    </weaponTags>
+    <verbs>
+      <li>
+        <defaultProjectile>Bullet_TestRifle</defaultProjectile>
+        <warmupTime>1.2</warmupTime>
+        <range>30.9</range>
+        <burstShotCount>3</burstShotCount>
+        <ticksBetweenBurstShots>12</ticksBetweenBurstShots>
+      </li>
+    </verbs>
+    <statBases>
+      <RangedWeapon_Cooldown>2.0</RangedWeapon_Cooldown>
+      <AccuracyTouch>0.75</AccuracyTouch>
+      <AccuracyShort>0.84</AccuracyShort>
+      <AccuracyMedium>0.72</AccuracyMedium>
+      <AccuracyLong>0.58</AccuracyLong>
+    </statBases>
+  </ThingDef>
+
+  <ThingDef>
+    <defName>Bullet_TestRifle</defName>
+    <label>test bullet</label>
+    <projectile>
+      <damageDef>Sharp</damageDef>
+      <damageAmountBase>10</damageAmountBase>
+      <armorPenetrationBase>0.18</armorPenetrationBase>
+    </projectile>
+  </ThingDef>
+
+  <ThingDef ParentName="BaseMeleeWeapon">
+    <defName>MeleeWeapon_TestMace</defName>
+    <label>test mace</label>
+    <thingCategories>
+      <li>Weapons</li>
+    </thingCategories>
+    <tools>
+      <li>
+        <label>smash</label>
+        <capacities>
+          <li>Blunt</li>
+        </capacities>
+        <power>16</power>
+        <cooldownTime>2.1</cooldownTime>
+        <armorPenetration>0.24</armorPenetration>
+      </li>
+    </tools>
+  </ThingDef>
+</Defs>
+

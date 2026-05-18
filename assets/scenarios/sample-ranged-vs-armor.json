@@ -1,0 +1,67 @@
+{
+  "name": "sample-ranged-vs-armor",
+  "attacker": {
+    "name": "careful-shooter-baseliner",
+    "shooting_skill": 12,
+    "melee_skill": 4,
+    "traits": ["careful_shooter"],
+    "capacities": {
+      "sight": 1.0,
+      "manipulation": 1.0,
+      "moving": 1.0
+    }
+  },
+  "defender": {
+    "name": "tough-armored-baseliner",
+    "shooting_skill": 4,
+    "melee_skill": 6,
+    "traits": ["tough"],
+    "capacities": {
+      "sight": 1.0,
+      "manipulation": 1.0,
+      "moving": 1.0
+    },
+    "apparel": [
+      {
+        "name": "devilstrand-duster-like",
+        "source": "sample",
+        "layers": ["Shell"],
+        "covers": ["Torso", "Arms", "Legs"],
+        "armor_sharp": 28,
+        "armor_blunt": 8,
+        "armor_heat": 20
+      },
+      {
+        "name": "flak-vest-like",
+        "source": "sample",
+        "layers": ["Middle"],
+        "covers": ["Torso"],
+        "armor_sharp": 100,
+        "armor_blunt": 36,
+        "armor_heat": 10
+      }
+    ]
+  },
+  "weapon": {
+    "name": "assault-rifle-like",
+    "attack_mode": "ranged",
+    "damage_type": "Sharp",
+    "damage": 11,
+    "armor_penetration": 16,
+    "warmup_seconds": 1.5,
+    "cooldown_seconds": 2.4,
+    "burst_shot_count": 3,
+    "burst_shot_interval_seconds": 0.2,
+    "accuracy_close": 0.74,
+    "accuracy_short": 0.9,
+    "accuracy_medium": 0.82,
+    "accuracy_long": 0.7
+  },
+  "context": {
+    "distance_cells": 18,
+    "target_body_region": "Torso",
+    "cover_block_chance": 0.15,
+    "hit_chance_multiplier": 1.0
+  }
+}
+

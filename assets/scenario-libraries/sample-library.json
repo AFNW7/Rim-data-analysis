@@ -1,0 +1,79 @@
+{
+  "name": "sample-vanilla-library",
+  "templates": [
+    {
+      "id": "baseline_shooter",
+      "name": "Baseline Shooter",
+      "shooting_skill": 12,
+      "melee_skill": 4
+    },
+    {
+      "id": "careful_shooter",
+      "extends": "baseline_shooter",
+      "name": "Careful Shooter",
+      "traits": ["careful_shooter"]
+    },
+    {
+      "id": "baseline_target",
+      "name": "Baseline Target",
+      "shooting_skill": 4,
+      "melee_skill": 6
+    },
+    {
+      "id": "vest_target",
+      "extends": "baseline_target",
+      "name": "Vest Target",
+      "apparel_def_names": ["Apparel_TestVest"]
+    },
+    {
+      "id": "layered_target",
+      "extends": "baseline_target",
+      "name": "Layered Target",
+      "apparel_def_names": ["Apparel_TestVest", "Apparel_TestDuster"]
+    },
+    {
+      "id": "tough_layered_target",
+      "extends": "layered_target",
+      "name": "Tough Layered Target",
+      "add_traits": ["tough"]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "rifle_vs_vest",
+      "name": "Rifle vs Vest",
+      "attacker_template": "baseline_shooter",
+      "defender_template": "vest_target",
+      "weapon_def_name": "Gun_TestRifle",
+      "tags": ["ranged", "vest"],
+      "context": {
+        "distance_cells": 18,
+        "target_body_region": "Torso"
+      }
+    },
+    {
+      "id": "rifle_vs_layered",
+      "name": "Rifle vs Layered",
+      "attacker_template": "careful_shooter",
+      "defender_template": "layered_target",
+      "weapon_def_name": "Gun_TestRifle",
+      "tags": ["ranged", "layered"],
+      "context": {
+        "distance_cells": 18,
+        "target_body_region": "Torso"
+      }
+    },
+    {
+      "id": "mace_vs_tough_layered",
+      "name": "Mace vs Tough Layered",
+      "attacker_template": "baseline_shooter",
+      "defender_template": "tough_layered_target",
+      "weapon_def_name": "MeleeWeapon_TestMace",
+      "tags": ["melee", "layered", "tough"],
+      "context": {
+        "target_body_region": "Torso"
+      }
+    }
+  ]
+}
+
