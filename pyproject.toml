@@ -21,6 +21,7 @@ dev = [
 
 [project.scripts]
 rim-analysis = "rim_data_analysis.cli:main"
+rim-analysis-app = "rim_data_analysis.desktop_user_app:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -37,4 +38,3 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
-

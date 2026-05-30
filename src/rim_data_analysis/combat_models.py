@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 @dataclass(slots=True)
 class CombatStatModifier:
     name: str
+    shooting_skill_offset: float = 0.0
     shooting_accuracy_per_tile_offset: float = 0.0
     shooting_accuracy_multiplier: float = 1.0
     aiming_time_multiplier: float = 1.0
@@ -234,4 +235,3 @@ class CombatAnalysisResult:
             "armor": self.armor.to_dict(),
             "damage": self.damage.to_dict(),
         }
-

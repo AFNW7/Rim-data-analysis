@@ -40,7 +40,8 @@ def compute_shooting_accuracy_per_tile(pawn: PawnCombatProfile) -> float:
         return _clamp(pawn.shooting_accuracy_per_tile_override, 0.01, 0.9999)
 
     style = _shooting_style_for(pawn)
-    skill = int(_clamp(float(pawn.shooting_skill), 0.0, 20.0))
+    skill_offset = sum(mod.shooting_skill_offset for mod in pawn.modifiers) if pawn.modifiers else 0.0
+    skill = int(_clamp(float(pawn.shooting_skill) + skill_offset, 0.0, 20.0))
     base = SHOOTING_ACCURACY_BY_STYLE[style][skill]
     multiplier = prod(mod.shooting_accuracy_multiplier for mod in pawn.modifiers) if pawn.modifiers else 1.0
     offset = sum(mod.shooting_accuracy_per_tile_offset for mod in pawn.modifiers)
@@ -413,4 +414,3 @@ def analyze_scenario(scenario: CombatScenario) -> CombatAnalysisResult:
         armor=armor,
         damage=damage,
     )
-

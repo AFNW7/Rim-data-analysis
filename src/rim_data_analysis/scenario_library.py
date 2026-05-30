@@ -25,6 +25,453 @@ from rim_data_analysis.combat_models import (
 from rim_data_analysis.vanilla_models import VanillaApparelRecord, VanillaCatalog, VanillaWeaponRecord
 
 
+class ScenarioLibraryValidationError(ValueError):
+    """Raised when a scenario library JSON file does not follow the V1 format."""
+
+
+_LIBRARY_ROOT_FIELDS = {"format_version", "name", "templates", "scenarios"}
+_TEMPLATE_FIELDS = {
+    "id",
+    "template_id",
+    "name",
+    "extends",
+    "species",
+    "shooting_skill",
+    "melee_skill",
+    "body_size",
+    "capacities",
+    "traits",
+    "add_traits",
+    "remove_traits",
+    "modifiers",
+    "apparel_def_names",
+    "add_apparel_def_names",
+    "remove_apparel_def_names",
+    "manual_apparel",
+    "shooting_accuracy_per_tile_override",
+    "melee_hit_chance_override",
+    "melee_dodge_chance_override",
+    "notes",
+}
+_SCENARIO_FIELDS = {
+    "id",
+    "scenario_id",
+    "name",
+    "attacker_template",
+    "defender_template",
+    "weapon_def_name",
+    "manual_weapon",
+    "attacker_override",
+    "defender_override",
+    "context",
+    "tags",
+    "notes",
+}
+_CAPACITY_FIELDS = {"sight", "manipulation", "moving"}
+_MODIFIER_FIELDS = {
+    "name",
+    "shooting_skill_offset",
+    "shooting_accuracy_per_tile_offset",
+    "shooting_accuracy_multiplier",
+    "aiming_time_multiplier",
+    "ranged_cooldown_multiplier",
+    "melee_hit_score_offset",
+    "melee_hit_chance_offset",
+    "melee_hit_chance_multiplier",
+    "melee_dodge_score_offset",
+    "melee_dodge_chance_offset",
+    "melee_dodge_chance_multiplier",
+    "melee_damage_multiplier",
+    "armor_penetration_multiplier",
+    "incoming_damage_multiplier",
+}
+_APPAREL_FIELDS = {
+    "name",
+    "source",
+    "layers",
+    "covers",
+    "armor_sharp",
+    "armor_blunt",
+    "armor_heat",
+    "layer_priority_override",
+}
+_WEAPON_FIELDS = {
+    "name",
+    "attack_mode",
+    "damage_type",
+    "damage",
+    "armor_penetration",
+    "warmup_seconds",
+    "cooldown_seconds",
+    "burst_shot_count",
+    "burst_shot_interval_seconds",
+    "accuracy_close",
+    "accuracy_short",
+    "accuracy_medium",
+    "accuracy_long",
+}
+_CONTEXT_FIELDS = {
+    "distance_cells",
+    "target_body_region",
+    "target_is_aiming_or_firing",
+    "hit_chance_multiplier",
+    "cover_block_chance",
+}
+
+
+def _raise_validation_error(path: str, message: str) -> None:
+    raise ScenarioLibraryValidationError(f"{path}: {message}")
+
+
+def _ensure_object(value: object, path: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        _raise_validation_error(path, "must be an object.")
+    return value
+
+
+def _ensure_list(value: object, path: str) -> list[object]:
+    if not isinstance(value, list):
+        _raise_validation_error(path, "must be an array.")
+    return value
+
+
+def _ensure_known_fields(data: dict[str, object], allowed: set[str], path: str) -> None:
+    unknown_fields = sorted(set(data) - allowed)
+    if unknown_fields:
+        joined = ", ".join(unknown_fields)
+        _raise_validation_error(path, f"contains unknown field(s): {joined}.")
+
+
+def _ensure_string(
+    value: object,
+    path: str,
+    *,
+    allow_empty: bool = False,
+) -> str:
+    if not isinstance(value, str):
+        _raise_validation_error(path, "must be a string.")
+    if not allow_empty and not value.strip():
+        _raise_validation_error(path, "must not be empty.")
+    return value
+
+
+def _ensure_number(value: object, path: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        _raise_validation_error(path, "must be a number.")
+    return float(value)
+
+
+def _ensure_int(value: object, path: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        _raise_validation_error(path, "must be an integer.")
+    return value
+
+
+def _ensure_bool(value: object, path: str) -> bool:
+    if not isinstance(value, bool):
+        _raise_validation_error(path, "must be a boolean.")
+    return value
+
+
+def _resolve_alias_string(
+    data: dict[str, object],
+    *,
+    primary_key: str,
+    alias_key: str,
+    path: str,
+    required: bool,
+) -> str | None:
+    primary_present = primary_key in data and data[primary_key] is not None
+    alias_present = alias_key in data and data[alias_key] is not None
+
+    primary_value = None
+    alias_value = None
+    if primary_present:
+        primary_value = _ensure_string(data[primary_key], f"{path}.{primary_key}")
+    if alias_present:
+        alias_value = _ensure_string(data[alias_key], f"{path}.{alias_key}")
+
+    if primary_present and alias_present and primary_value != alias_value:
+        _raise_validation_error(
+            path,
+            f"'{primary_key}' and '{alias_key}' must match when both are provided.",
+        )
+
+    if primary_value is not None:
+        return primary_value
+    if alias_value is not None:
+        return alias_value
+    if required:
+        _raise_validation_error(path, f"requires '{primary_key}' or '{alias_key}'.")
+    return None
+
+
+def _validate_string_list(value: object, path: str) -> None:
+    items = _ensure_list(value, path)
+    for index, item in enumerate(items):
+        _ensure_string(item, f"{path}[{index}]")
+
+
+def _validate_numeric_fields(data: dict[str, object], path: str, field_names: set[str]) -> None:
+    for field_name in field_names:
+        if field_name in data and data[field_name] is not None:
+            _ensure_number(data[field_name], f"{path}.{field_name}")
+
+
+def _validate_capacities(value: object, path: str) -> None:
+    capacities = _ensure_object(value, path)
+    _ensure_known_fields(capacities, _CAPACITY_FIELDS, path)
+    for field_name in _CAPACITY_FIELDS:
+        if field_name in capacities and capacities[field_name] is not None:
+            _ensure_number(capacities[field_name], f"{path}.{field_name}")
+
+
+def _validate_modifier(value: object, path: str) -> None:
+    modifier = _ensure_object(value, path)
+    _ensure_known_fields(modifier, _MODIFIER_FIELDS, path)
+    if "name" in modifier and modifier["name"] is not None:
+        _ensure_string(modifier["name"], f"{path}.name")
+    _validate_numeric_fields(modifier, path, _MODIFIER_FIELDS - {"name"})
+
+
+def _validate_manual_apparel(value: object, path: str) -> None:
+    apparel = _ensure_object(value, path)
+    _ensure_known_fields(apparel, _APPAREL_FIELDS, path)
+    if "name" not in apparel or apparel["name"] is None:
+        _raise_validation_error(path, "requires 'name'.")
+    _ensure_string(apparel["name"], f"{path}.name")
+    if "source" in apparel and apparel["source"] is not None:
+        _ensure_string(apparel["source"], f"{path}.source")
+    if "layers" in apparel and apparel["layers"] is not None:
+        _validate_string_list(apparel["layers"], f"{path}.layers")
+    if "covers" in apparel and apparel["covers"] is not None:
+        _validate_string_list(apparel["covers"], f"{path}.covers")
+    _validate_numeric_fields(
+        apparel,
+        path,
+        {"armor_sharp", "armor_blunt", "armor_heat"},
+    )
+    if "layer_priority_override" in apparel and apparel["layer_priority_override"] is not None:
+        _ensure_int(apparel["layer_priority_override"], f"{path}.layer_priority_override")
+
+
+def _validate_manual_weapon(value: object, path: str) -> None:
+    weapon = _ensure_object(value, path)
+    _ensure_known_fields(weapon, _WEAPON_FIELDS, path)
+    for required_field in ("name", "attack_mode", "damage_type", "damage"):
+        if required_field not in weapon or weapon[required_field] is None:
+            _raise_validation_error(path, f"requires '{required_field}'.")
+
+    _ensure_string(weapon["name"], f"{path}.name")
+    attack_mode = _ensure_string(weapon["attack_mode"], f"{path}.attack_mode")
+    if attack_mode not in {"ranged", "melee"}:
+        _raise_validation_error(f"{path}.attack_mode", "must be 'ranged' or 'melee'.")
+    _ensure_string(weapon["damage_type"], f"{path}.damage_type")
+    _validate_numeric_fields(
+        weapon,
+        path,
+        {
+            "damage",
+            "armor_penetration",
+            "warmup_seconds",
+            "cooldown_seconds",
+            "burst_shot_interval_seconds",
+            "accuracy_close",
+            "accuracy_short",
+            "accuracy_medium",
+            "accuracy_long",
+        },
+    )
+    if "burst_shot_count" in weapon and weapon["burst_shot_count"] is not None:
+        _ensure_int(weapon["burst_shot_count"], f"{path}.burst_shot_count")
+
+
+def _validate_context(value: object, path: str) -> None:
+    context = _ensure_object(value, path)
+    _ensure_known_fields(context, _CONTEXT_FIELDS, path)
+    if "distance_cells" in context and context["distance_cells"] is not None:
+        _ensure_int(context["distance_cells"], f"{path}.distance_cells")
+    if "target_body_region" in context and context["target_body_region"] is not None:
+        _ensure_string(context["target_body_region"], f"{path}.target_body_region")
+    if "target_is_aiming_or_firing" in context and context["target_is_aiming_or_firing"] is not None:
+        _ensure_bool(context["target_is_aiming_or_firing"], f"{path}.target_is_aiming_or_firing")
+    _validate_numeric_fields(context, path, {"hit_chance_multiplier", "cover_block_chance"})
+
+
+def _validate_template_payload(
+    value: object,
+    path: str,
+    *,
+    allow_missing_id: bool,
+    allow_extends: bool,
+) -> str | None:
+    template = _ensure_object(value, path)
+    _ensure_known_fields(template, _TEMPLATE_FIELDS, path)
+    template_id = _resolve_alias_string(
+        template,
+        primary_key="id",
+        alias_key="template_id",
+        path=path,
+        required=not allow_missing_id,
+    )
+
+    if not allow_extends and "extends" in template and template["extends"] is not None:
+        _raise_validation_error(
+            f"{path}.extends",
+            "is not supported inside scenario overrides; overrides already apply on top of the base template.",
+        )
+    if "name" in template and template["name"] is not None:
+        _ensure_string(template["name"], f"{path}.name")
+    if "extends" in template and template["extends"] is not None:
+        _ensure_string(template["extends"], f"{path}.extends")
+    if "species" in template and template["species"] is not None:
+        _ensure_string(template["species"], f"{path}.species")
+    for field_name in ("shooting_skill", "melee_skill"):
+        if field_name in template and template[field_name] is not None:
+            _ensure_int(template[field_name], f"{path}.{field_name}")
+    _validate_numeric_fields(
+        template,
+        path,
+        {
+            "body_size",
+            "shooting_accuracy_per_tile_override",
+            "melee_hit_chance_override",
+            "melee_dodge_chance_override",
+        },
+    )
+    if "capacities" in template and template["capacities"] is not None:
+        _validate_capacities(template["capacities"], f"{path}.capacities")
+    for field_name in (
+        "traits",
+        "add_traits",
+        "remove_traits",
+        "apparel_def_names",
+        "add_apparel_def_names",
+        "remove_apparel_def_names",
+    ):
+        if field_name in template and template[field_name] is not None:
+            _validate_string_list(template[field_name], f"{path}.{field_name}")
+    if "modifiers" in template and template["modifiers"] is not None:
+        modifiers = _ensure_list(template["modifiers"], f"{path}.modifiers")
+        for index, modifier in enumerate(modifiers):
+            _validate_modifier(modifier, f"{path}.modifiers[{index}]")
+    if "manual_apparel" in template and template["manual_apparel"] is not None:
+        manual_apparel = _ensure_list(template["manual_apparel"], f"{path}.manual_apparel")
+        for index, apparel in enumerate(manual_apparel):
+            _validate_manual_apparel(apparel, f"{path}.manual_apparel[{index}]")
+    if "notes" in template and template["notes"] is not None:
+        _ensure_string(template["notes"], f"{path}.notes", allow_empty=True)
+
+    return template_id
+
+
+def _validate_scenario_payload(value: object, path: str) -> str:
+    scenario = _ensure_object(value, path)
+    _ensure_known_fields(scenario, _SCENARIO_FIELDS, path)
+    scenario_id = _resolve_alias_string(
+        scenario,
+        primary_key="id",
+        alias_key="scenario_id",
+        path=path,
+        required=True,
+    )
+    if scenario_id is None:
+        _raise_validation_error(path, "could not resolve scenario id.")
+
+    if "name" not in scenario or scenario["name"] is None:
+        _raise_validation_error(path, "requires 'name'.")
+    _ensure_string(scenario["name"], f"{path}.name")
+
+    for field_name in ("attacker_template", "defender_template"):
+        if field_name not in scenario or scenario[field_name] is None:
+            _raise_validation_error(path, f"requires '{field_name}'.")
+        _ensure_string(scenario[field_name], f"{path}.{field_name}")
+
+    has_weapon_def_name = "weapon_def_name" in scenario and scenario["weapon_def_name"] is not None
+    has_manual_weapon = "manual_weapon" in scenario and scenario["manual_weapon"] is not None
+    if has_weapon_def_name == has_manual_weapon:
+        _raise_validation_error(
+            path,
+            "must provide exactly one of 'weapon_def_name' or 'manual_weapon'.",
+        )
+    if has_weapon_def_name:
+        _ensure_string(scenario["weapon_def_name"], f"{path}.weapon_def_name")
+    if has_manual_weapon:
+        _validate_manual_weapon(scenario["manual_weapon"], f"{path}.manual_weapon")
+
+    if "attacker_override" in scenario and scenario["attacker_override"] is not None:
+        _validate_template_payload(
+            scenario["attacker_override"],
+            f"{path}.attacker_override",
+            allow_missing_id=True,
+            allow_extends=False,
+        )
+    if "defender_override" in scenario and scenario["defender_override"] is not None:
+        _validate_template_payload(
+            scenario["defender_override"],
+            f"{path}.defender_override",
+            allow_missing_id=True,
+            allow_extends=False,
+        )
+    if "context" in scenario and scenario["context"] is not None:
+        _validate_context(scenario["context"], f"{path}.context")
+    if "tags" in scenario and scenario["tags"] is not None:
+        _validate_string_list(scenario["tags"], f"{path}.tags")
+    if "notes" in scenario and scenario["notes"] is not None:
+        _ensure_string(scenario["notes"], f"{path}.notes", allow_empty=True)
+
+    return scenario_id
+
+
+def _validate_library_relationships(
+    templates: dict[str, PawnTemplateSpec],
+    template_paths: dict[str, str],
+    scenarios: list[tuple[ScenarioSpec, str]],
+) -> None:
+    resolved_templates: set[str] = set()
+    visiting_templates: set[str] = set()
+    stack: list[str] = []
+
+    def visit(template_id: str) -> None:
+        if template_id in resolved_templates:
+            return
+
+        visiting_templates.add(template_id)
+        stack.append(template_id)
+        parent_id = templates[template_id].extends
+        if parent_id is not None:
+            if parent_id not in templates:
+                _raise_validation_error(
+                    f"{template_paths[template_id]}.extends",
+                    f"references unknown template '{parent_id}'.",
+                )
+            if parent_id in visiting_templates:
+                cycle = " -> ".join(stack + [parent_id])
+                _raise_validation_error(
+                    f"{template_paths[template_id]}.extends",
+                    f"creates an inheritance cycle: {cycle}.",
+                )
+            visit(parent_id)
+        stack.pop()
+        visiting_templates.remove(template_id)
+        resolved_templates.add(template_id)
+
+    for template_id in templates:
+        visit(template_id)
+
+    for scenario_spec, scenario_path in scenarios:
+        if scenario_spec.attacker_template not in templates:
+            _raise_validation_error(
+                f"{scenario_path}.attacker_template",
+                f"references unknown template '{scenario_spec.attacker_template}'.",
+            )
+        if scenario_spec.defender_template not in templates:
+            _raise_validation_error(
+                f"{scenario_path}.defender_template",
+                f"references unknown template '{scenario_spec.defender_template}'.",
+            )
+
+
 @dataclass(slots=True)
 class PawnTemplateSpec:
     template_id: str
@@ -47,7 +494,6 @@ class PawnTemplateSpec:
     melee_hit_chance_override: float | None = None
     melee_dodge_chance_override: float | None = None
     notes: str | None = None
-    tags: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -70,6 +516,7 @@ class ScenarioLibrary:
     name: str
     templates: dict[str, PawnTemplateSpec]
     scenarios: list[ScenarioSpec]
+    format_version: int = 1
 
 
 @dataclass(slots=True)
@@ -227,7 +674,6 @@ def _parse_template_spec(data: dict[str, object], *, default_id: str | None = No
             else None
         ),
         notes=str(data["notes"]) if data.get("notes") is not None else None,
-        tags=[str(item) for item in data.get("tags", [])],
     )
 
 
@@ -264,25 +710,67 @@ def load_scenario_library(path: Path) -> ScenarioLibrary:
     if not isinstance(payload, dict):
         raise ValueError("Scenario library root must be an object.")
 
-    templates_list = payload.get("templates", [])
-    scenarios_list = payload.get("scenarios", [])
-    templates = {
-        spec.template_id: spec
-        for spec in (
-            _parse_template_spec(item)
-            for item in templates_list
-            if isinstance(item, dict)
+    _ensure_known_fields(payload, _LIBRARY_ROOT_FIELDS, "root")
+
+    format_version_value = payload.get("format_version", 1)
+    format_version = _ensure_int(format_version_value, "root.format_version")
+    if format_version != 1:
+        _raise_validation_error("root.format_version", "only format_version 1 is supported.")
+    if "name" in payload and payload["name"] is not None:
+        _ensure_string(payload["name"], "root.name")
+
+    if "templates" not in payload:
+        _raise_validation_error("root", "requires 'templates'.")
+    if "scenarios" not in payload:
+        _raise_validation_error("root", "requires 'scenarios'.")
+
+    templates_list = _ensure_list(payload["templates"], "root.templates")
+    scenarios_list = _ensure_list(payload["scenarios"], "root.scenarios")
+
+    templates: dict[str, PawnTemplateSpec] = {}
+    template_paths: dict[str, str] = {}
+    for index, item in enumerate(templates_list):
+        item_path = f"root.templates[{index}]"
+        template_id = _validate_template_payload(
+            item,
+            item_path,
+            allow_missing_id=False,
+            allow_extends=True,
         )
-    }
-    scenarios = [
-        _parse_scenario_spec(item)
-        for item in scenarios_list
-        if isinstance(item, dict)
-    ]
+        if template_id is None:
+            _raise_validation_error(item_path, "could not resolve template id.")
+        if template_id in templates:
+            _raise_validation_error(
+                item_path,
+                f"duplicates template id '{template_id}' from {template_paths[template_id]}.",
+            )
+        template_spec = _parse_template_spec(_ensure_object(item, item_path))
+        templates[template_id] = template_spec
+        template_paths[template_id] = item_path
+
+    scenarios: list[ScenarioSpec] = []
+    scenarios_with_paths: list[tuple[ScenarioSpec, str]] = []
+    scenario_paths: dict[str, str] = {}
+    for index, item in enumerate(scenarios_list):
+        item_path = f"root.scenarios[{index}]"
+        scenario_id = _validate_scenario_payload(item, item_path)
+        if scenario_id in scenario_paths:
+            _raise_validation_error(
+                item_path,
+                f"duplicates scenario id '{scenario_id}' from {scenario_paths[scenario_id]}.",
+            )
+        scenario_spec = _parse_scenario_spec(_ensure_object(item, item_path))
+        scenarios.append(scenario_spec)
+        scenarios_with_paths.append((scenario_spec, item_path))
+        scenario_paths[scenario_id] = item_path
+
+    _validate_library_relationships(templates, template_paths, scenarios_with_paths)
+
     return ScenarioLibrary(
         name=str(payload.get("name", path.stem)),
         templates=templates,
         scenarios=scenarios,
+        format_version=format_version,
     )
 
 
@@ -363,6 +851,7 @@ class ScenarioLibraryResolver:
             apparel.def_name: apparel for apparel in catalog.apparel
         }
         self._template_cache: dict[str, ResolvedPawnBlueprint] = {}
+        self._template_stack: list[str] = []
 
     def resolve_template(self, template_id: str) -> ResolvedPawnBlueprint:
         if template_id in self._template_cache:
@@ -371,15 +860,22 @@ class ScenarioLibraryResolver:
         spec = self.library.templates.get(template_id)
         if spec is None:
             raise KeyError(f"Unknown template: {template_id}")
+        if template_id in self._template_stack:
+            cycle = " -> ".join(self._template_stack + [template_id])
+            raise ScenarioLibraryValidationError(f"Template inheritance cycle detected at runtime: {cycle}")
 
-        if spec.extends:
-            base = self.resolve_template(spec.extends)
-        else:
-            base = ResolvedPawnBlueprint(name=spec.name or spec.template_id)
+        self._template_stack.append(template_id)
+        try:
+            if spec.extends:
+                base = self.resolve_template(spec.extends)
+            else:
+                base = ResolvedPawnBlueprint(name=spec.name or spec.template_id)
 
-        resolved = _apply_spec(base, spec)
-        self._template_cache[template_id] = resolved
-        return resolved.clone()
+            resolved = _apply_spec(base, spec)
+            self._template_cache[template_id] = resolved
+            return resolved.clone()
+        finally:
+            self._template_stack.pop()
 
     def resolve_weapon(self, scenario: ScenarioSpec) -> WeaponProfile:
         if scenario.manual_weapon is not None:

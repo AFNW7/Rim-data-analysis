@@ -1,0 +1,525 @@
+{
+  "format_version": 1,
+  "name": "shooting-test-library",
+  "templates": [
+    {
+      "id": "base_shooter_none",
+      "name": "射手底模",
+      "species": "human_baseliner",
+      "shooting_skill": 12,
+      "melee_skill": 4
+    },
+    {
+      "id": "base_shooter_trigger_happy",
+      "extends": "base_shooter_none",
+      "name": "射手底模-乱开枪",
+      "traits": ["trigger_happy"]
+    },
+    {
+      "id": "master_none_none",
+      "extends": "base_shooter_none",
+      "name": "大师",
+      "notes": "大师级速射机枪，无特性，无额外 buff。"
+    },
+    {
+      "id": "master_none_specialist",
+      "extends": "master_none_none",
+      "name": "大师射击专家",
+      "modifiers": [
+        {
+          "name": "射击专家自身 buff",
+          "shooting_skill_offset": 4,
+          "shooting_accuracy_multiplier": 1.05,
+          "aiming_time_multiplier": 0.9
+        }
+      ]
+    },
+    {
+      "id": "master_none_command",
+      "extends": "master_none_none",
+      "name": "大师射击指令",
+      "modifiers": [
+        {
+          "name": "射击指令 buff",
+          "shooting_skill_offset": 6,
+          "shooting_accuracy_multiplier": 1.08,
+          "aiming_time_multiplier": 0.85
+        }
+      ]
+    },
+    {
+      "id": "master_trigger_happy_none",
+      "extends": "base_shooter_trigger_happy",
+      "name": "大师乱开枪",
+      "notes": "大师级速射机枪，乱开枪，无额外 buff。"
+    },
+    {
+      "id": "master_trigger_happy_specialist",
+      "extends": "master_trigger_happy_none",
+      "name": "大师乱开枪射击专家",
+      "modifiers": [
+        {
+          "name": "射击专家自身 buff",
+          "shooting_skill_offset": 4,
+          "shooting_accuracy_multiplier": 1.05,
+          "aiming_time_multiplier": 0.9
+        }
+      ]
+    },
+    {
+      "id": "master_trigger_happy_command",
+      "extends": "master_trigger_happy_none",
+      "name": "大师乱开枪射击指令",
+      "modifiers": [
+        {
+          "name": "射击指令 buff",
+          "shooting_skill_offset": 6,
+          "shooting_accuracy_multiplier": 1.08,
+          "aiming_time_multiplier": 0.85
+        }
+      ]
+    },
+    {
+      "id": "legend_none_none",
+      "extends": "base_shooter_none",
+      "name": "传奇",
+      "notes": "传奇速射机枪，无特性，无额外 buff。"
+    },
+    {
+      "id": "legend_none_specialist",
+      "extends": "legend_none_none",
+      "name": "传奇射击专家",
+      "modifiers": [
+        {
+          "name": "射击专家自身 buff",
+          "shooting_skill_offset": 4,
+          "shooting_accuracy_multiplier": 1.05,
+          "aiming_time_multiplier": 0.9
+        }
+      ]
+    },
+    {
+      "id": "legend_none_command",
+      "extends": "legend_none_none",
+      "name": "传奇射击指令",
+      "modifiers": [
+        {
+          "name": "射击指令 buff",
+          "shooting_skill_offset": 6,
+          "shooting_accuracy_multiplier": 1.08,
+          "aiming_time_multiplier": 0.85
+        }
+      ]
+    },
+    {
+      "id": "legend_trigger_happy_none",
+      "extends": "base_shooter_trigger_happy",
+      "name": "传奇乱开枪",
+      "notes": "传奇速射机枪，乱开枪，无额外 buff。"
+    },
+    {
+      "id": "legend_trigger_happy_specialist",
+      "extends": "legend_trigger_happy_none",
+      "name": "传奇乱开枪射击专家",
+      "modifiers": [
+        {
+          "name": "射击专家自身 buff",
+          "shooting_skill_offset": 4,
+          "shooting_accuracy_multiplier": 1.05,
+          "aiming_time_multiplier": 0.9
+        }
+      ]
+    },
+    {
+      "id": "legend_trigger_happy_command",
+      "extends": "legend_trigger_happy_none",
+      "name": "传奇乱开枪射击指令",
+      "modifiers": [
+        {
+          "name": "射击指令 buff",
+          "shooting_skill_offset": 6,
+          "shooting_accuracy_multiplier": 1.08,
+          "aiming_time_multiplier": 0.85
+        }
+      ]
+    },
+    {
+      "id": "target_shirt_and_pants",
+      "name": "衬衫长裤靶子",
+      "species": "human_baseliner",
+      "shooting_skill": 0,
+      "melee_skill": 0,
+      "manual_apparel": [
+        {
+          "name": "优秀玻璃钢衬衫",
+          "source": "shooting-test",
+          "layers": ["OnSkin"],
+          "covers": ["Torso", "Arms"],
+          "armor_sharp": 10,
+          "armor_blunt": 4,
+          "armor_heat": 4
+        },
+        {
+          "name": "优秀玻璃钢长裤",
+          "source": "shooting-test",
+          "layers": ["OnSkin"],
+          "covers": ["Legs"],
+          "armor_sharp": 10,
+          "armor_blunt": 4,
+          "armor_heat": 4
+        }
+      ]
+    },
+    {
+      "id": "target_flak_set",
+      "name": "防弹三件套靶子",
+      "extends": "target_shirt_and_pants",
+      "manual_apparel": [
+        {
+          "name": "优秀玻璃钢防弹背心",
+          "source": "shooting-test",
+          "layers": ["Middle"],
+          "covers": ["Torso"],
+          "armor_sharp": 128,
+          "armor_blunt": 48,
+          "armor_heat": 18
+        },
+        {
+          "name": "优秀玻璃钢防弹长裤",
+          "source": "shooting-test",
+          "layers": ["Middle"],
+          "covers": ["Legs"],
+          "armor_sharp": 70,
+          "armor_blunt": 26,
+          "armor_heat": 10
+        },
+        {
+          "name": "优秀玻璃钢防弹头盔",
+          "source": "shooting-test",
+          "layers": ["Overhead"],
+          "covers": ["Head"],
+          "armor_sharp": 112,
+          "armor_blunt": 42,
+          "armor_heat": 16
+        }
+      ]
+    },
+    {
+      "id": "target_marine_set",
+      "name": "海军动力甲靶子",
+      "species": "human_baseliner",
+      "shooting_skill": 0,
+      "melee_skill": 0,
+      "manual_apparel": [
+        {
+          "name": "优秀海军动力甲",
+          "source": "shooting-test",
+          "layers": ["Shell"],
+          "covers": ["Torso", "Arms", "Legs"],
+          "armor_sharp": 160,
+          "armor_blunt": 62,
+          "armor_heat": 56
+        },
+        {
+          "name": "优秀海军头盔",
+          "source": "shooting-test",
+          "layers": ["Overhead"],
+          "covers": ["Head"],
+          "armor_sharp": 150,
+          "armor_blunt": 58,
+          "armor_heat": 50
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "master_none_none_vs_shirt_pants",
+      "name": "大师 vs 衬衫长裤",
+      "attacker_template": "master_none_none",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "无buff", "衬衫长裤"]
+    },
+    {
+      "id": "master_none_none_vs_flak",
+      "name": "大师 vs 防弹三件套",
+      "attacker_template": "master_none_none",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "无buff", "防弹三件套"]
+    },
+    {
+      "id": "master_none_none_vs_marine",
+      "name": "大师 vs 海军动力甲",
+      "attacker_template": "master_none_none",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "无buff", "海军动力甲"]
+    },
+    {
+      "id": "master_none_specialist_vs_shirt_pants",
+      "name": "大师射击专家 vs 衬衫长裤",
+      "attacker_template": "master_none_specialist",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "射击专家", "衬衫长裤"]
+    },
+    {
+      "id": "master_none_specialist_vs_flak",
+      "name": "大师射击专家 vs 防弹三件套",
+      "attacker_template": "master_none_specialist",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "射击专家", "防弹三件套"]
+    },
+    {
+      "id": "master_none_specialist_vs_marine",
+      "name": "大师射击专家 vs 海军动力甲",
+      "attacker_template": "master_none_specialist",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "射击专家", "海军动力甲"]
+    },
+    {
+      "id": "master_none_command_vs_shirt_pants",
+      "name": "大师射击指令 vs 衬衫长裤",
+      "attacker_template": "master_none_command",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "射击指令", "衬衫长裤"]
+    },
+    {
+      "id": "master_none_command_vs_flak",
+      "name": "大师射击指令 vs 防弹三件套",
+      "attacker_template": "master_none_command",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "射击指令", "防弹三件套"]
+    },
+    {
+      "id": "master_none_command_vs_marine",
+      "name": "大师射击指令 vs 海军动力甲",
+      "attacker_template": "master_none_command",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "无特性", "射击指令", "海军动力甲"]
+    },
+    {
+      "id": "master_trigger_happy_none_vs_shirt_pants",
+      "name": "大师乱开枪 vs 衬衫长裤",
+      "attacker_template": "master_trigger_happy_none",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "无buff", "衬衫长裤"]
+    },
+    {
+      "id": "master_trigger_happy_none_vs_flak",
+      "name": "大师乱开枪 vs 防弹三件套",
+      "attacker_template": "master_trigger_happy_none",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "无buff", "防弹三件套"]
+    },
+    {
+      "id": "master_trigger_happy_none_vs_marine",
+      "name": "大师乱开枪 vs 海军动力甲",
+      "attacker_template": "master_trigger_happy_none",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "无buff", "海军动力甲"]
+    },
+    {
+      "id": "master_trigger_happy_specialist_vs_shirt_pants",
+      "name": "大师乱开枪射击专家 vs 衬衫长裤",
+      "attacker_template": "master_trigger_happy_specialist",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "射击专家", "衬衫长裤"]
+    },
+    {
+      "id": "master_trigger_happy_specialist_vs_flak",
+      "name": "大师乱开枪射击专家 vs 防弹三件套",
+      "attacker_template": "master_trigger_happy_specialist",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "射击专家", "防弹三件套"]
+    },
+    {
+      "id": "master_trigger_happy_specialist_vs_marine",
+      "name": "大师乱开枪射击专家 vs 海军动力甲",
+      "attacker_template": "master_trigger_happy_specialist",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "射击专家", "海军动力甲"]
+    },
+    {
+      "id": "master_trigger_happy_command_vs_shirt_pants",
+      "name": "大师乱开枪射击指令 vs 衬衫长裤",
+      "attacker_template": "master_trigger_happy_command",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "射击指令", "衬衫长裤"]
+    },
+    {
+      "id": "master_trigger_happy_command_vs_flak",
+      "name": "大师乱开枪射击指令 vs 防弹三件套",
+      "attacker_template": "master_trigger_happy_command",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "射击指令", "防弹三件套"]
+    },
+    {
+      "id": "master_trigger_happy_command_vs_marine",
+      "name": "大师乱开枪射击指令 vs 海军动力甲",
+      "attacker_template": "master_trigger_happy_command",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_MasterworkMinigun",
+      "tags": ["射击测试", "大师", "乱开枪", "射击指令", "海军动力甲"]
+    },
+    {
+      "id": "legend_none_none_vs_shirt_pants",
+      "name": "传奇 vs 衬衫长裤",
+      "attacker_template": "legend_none_none",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "无buff", "衬衫长裤"]
+    },
+    {
+      "id": "legend_none_none_vs_flak",
+      "name": "传奇 vs 防弹三件套",
+      "attacker_template": "legend_none_none",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "无buff", "防弹三件套"]
+    },
+    {
+      "id": "legend_none_none_vs_marine",
+      "name": "传奇 vs 海军动力甲",
+      "attacker_template": "legend_none_none",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "无buff", "海军动力甲"]
+    },
+    {
+      "id": "legend_none_specialist_vs_shirt_pants",
+      "name": "传奇射击专家 vs 衬衫长裤",
+      "attacker_template": "legend_none_specialist",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "射击专家", "衬衫长裤"]
+    },
+    {
+      "id": "legend_none_specialist_vs_flak",
+      "name": "传奇射击专家 vs 防弹三件套",
+      "attacker_template": "legend_none_specialist",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "射击专家", "防弹三件套"]
+    },
+    {
+      "id": "legend_none_specialist_vs_marine",
+      "name": "传奇射击专家 vs 海军动力甲",
+      "attacker_template": "legend_none_specialist",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "射击专家", "海军动力甲"]
+    },
+    {
+      "id": "legend_none_command_vs_shirt_pants",
+      "name": "传奇射击指令 vs 衬衫长裤",
+      "attacker_template": "legend_none_command",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "射击指令", "衬衫长裤"]
+    },
+    {
+      "id": "legend_none_command_vs_flak",
+      "name": "传奇射击指令 vs 防弹三件套",
+      "attacker_template": "legend_none_command",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "射击指令", "防弹三件套"]
+    },
+    {
+      "id": "legend_none_command_vs_marine",
+      "name": "传奇射击指令 vs 海军动力甲",
+      "attacker_template": "legend_none_command",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "无特性", "射击指令", "海军动力甲"]
+    },
+    {
+      "id": "legend_trigger_happy_none_vs_shirt_pants",
+      "name": "传奇乱开枪 vs 衬衫长裤",
+      "attacker_template": "legend_trigger_happy_none",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "无buff", "衬衫长裤"]
+    },
+    {
+      "id": "legend_trigger_happy_none_vs_flak",
+      "name": "传奇乱开枪 vs 防弹三件套",
+      "attacker_template": "legend_trigger_happy_none",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "无buff", "防弹三件套"]
+    },
+    {
+      "id": "legend_trigger_happy_none_vs_marine",
+      "name": "传奇乱开枪 vs 海军动力甲",
+      "attacker_template": "legend_trigger_happy_none",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "无buff", "海军动力甲"]
+    },
+    {
+      "id": "legend_trigger_happy_specialist_vs_shirt_pants",
+      "name": "传奇乱开枪射击专家 vs 衬衫长裤",
+      "attacker_template": "legend_trigger_happy_specialist",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "射击专家", "衬衫长裤"]
+    },
+    {
+      "id": "legend_trigger_happy_specialist_vs_flak",
+      "name": "传奇乱开枪射击专家 vs 防弹三件套",
+      "attacker_template": "legend_trigger_happy_specialist",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "射击专家", "防弹三件套"]
+    },
+    {
+      "id": "legend_trigger_happy_specialist_vs_marine",
+      "name": "传奇乱开枪射击专家 vs 海军动力甲",
+      "attacker_template": "legend_trigger_happy_specialist",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "射击专家", "海军动力甲"]
+    },
+    {
+      "id": "legend_trigger_happy_command_vs_shirt_pants",
+      "name": "传奇乱开枪射击指令 vs 衬衫长裤",
+      "attacker_template": "legend_trigger_happy_command",
+      "defender_template": "target_shirt_and_pants",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "射击指令", "衬衫长裤"]
+    },
+    {
+      "id": "legend_trigger_happy_command_vs_flak",
+      "name": "传奇乱开枪射击指令 vs 防弹三件套",
+      "attacker_template": "legend_trigger_happy_command",
+      "defender_template": "target_flak_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "射击指令", "防弹三件套"]
+    },
+    {
+      "id": "legend_trigger_happy_command_vs_marine",
+      "name": "传奇乱开枪射击指令 vs 海军动力甲",
+      "attacker_template": "legend_trigger_happy_command",
+      "defender_template": "target_marine_set",
+      "weapon_def_name": "Gun_LegendaryMinigun",
+      "tags": ["射击测试", "传奇", "乱开枪", "射击指令", "海军动力甲"]
+    }
+  ]
+}

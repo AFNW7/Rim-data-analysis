@@ -17,6 +17,7 @@ from rim_data_analysis.combat_models import (
 def _modifier_from_dict(data: dict[str, object]) -> CombatStatModifier:
     return CombatStatModifier(
         name=str(data.get("name", "custom_modifier")),
+        shooting_skill_offset=float(data.get("shooting_skill_offset", 0.0)),
         shooting_accuracy_per_tile_offset=float(data.get("shooting_accuracy_per_tile_offset", 0.0)),
         shooting_accuracy_multiplier=float(data.get("shooting_accuracy_multiplier", 1.0)),
         aiming_time_multiplier=float(data.get("aiming_time_multiplier", 1.0)),

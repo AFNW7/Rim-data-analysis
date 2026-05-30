@@ -10,11 +10,13 @@ def test_build_vanilla_catalog_extracts_weapons_and_apparel() -> None:
     catalog = build_vanilla_catalog(Path("tests/fixtures/vanilla_game_data"))
 
     assert catalog.packages == ["Core"]
-    assert len(catalog.weapons) == 2
+    assert len(catalog.weapons) == 4
     assert len(catalog.apparel) == 2
 
-    ranged = next(weapon for weapon in catalog.weapons if weapon.attack_mode == "ranged")
+    ranged = next(weapon for weapon in catalog.weapons if weapon.def_name == "Gun_TestRifle")
     melee = next(weapon for weapon in catalog.weapons if weapon.attack_mode == "melee")
+    legendary = next(weapon for weapon in catalog.weapons if weapon.def_name == "Gun_LegendaryMinigun")
+    masterwork = next(weapon for weapon in catalog.weapons if weapon.def_name == "Gun_MasterworkMinigun")
 
     assert ranged.def_name == "Gun_TestRifle"
     assert ranged.damage == 10
@@ -23,6 +25,10 @@ def test_build_vanilla_catalog_extracts_weapons_and_apparel() -> None:
     assert melee.def_name == "MeleeWeapon_TestMace"
     assert melee.damage_type == "Blunt"
     assert melee.armor_penetration == 24
+    assert masterwork.damage == 11
+    assert masterwork.armor_penetration == 16
+    assert legendary.damage == 12
+    assert legendary.cooldown_seconds == 1.95
 
 
 def test_build_vanilla_matchup_rows_returns_cross_product() -> None:
@@ -30,5 +36,5 @@ def test_build_vanilla_matchup_rows_returns_cross_product() -> None:
 
     rows = build_vanilla_matchup_rows(catalog)
 
-    assert len(rows) == 4
+    assert len(rows) == 8
     assert all(row["expected_dps"] >= 0 for row in rows)

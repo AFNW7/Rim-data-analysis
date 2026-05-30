@@ -54,5 +54,78 @@
       </li>
     </tools>
   </ThingDef>
-</Defs>
 
+  <ThingDef ParentName="BaseHumanMakeableGun">
+    <defName>Gun_MasterworkMinigun</defName>
+    <label>masterwork minigun</label>
+    <thingCategories>
+      <li>WeaponsRanged</li>
+    </thingCategories>
+    <weaponTags>
+      <li>RangedHeavy</li>
+    </weaponTags>
+    <verbs>
+      <li>
+        <defaultProjectile>Bullet_MasterworkMinigun</defaultProjectile>
+        <warmupTime>0.95</warmupTime>
+        <range>30.9</range>
+        <burstShotCount>3</burstShotCount>
+        <ticksBetweenBurstShots>7</ticksBetweenBurstShots>
+      </li>
+    </verbs>
+    <statBases>
+      <RangedWeapon_Cooldown>2.1</RangedWeapon_Cooldown>
+      <AccuracyTouch>0.90</AccuracyTouch>
+      <AccuracyShort>0.82</AccuracyShort>
+      <AccuracyMedium>0.70</AccuracyMedium>
+      <AccuracyLong>0.54</AccuracyLong>
+    </statBases>
+  </ThingDef>
+
+  <ThingDef>
+    <defName>Bullet_MasterworkMinigun</defName>
+    <label>masterwork minigun bullet</label>
+    <projectile>
+      <damageDef>Sharp</damageDef>
+      <damageAmountBase>11</damageAmountBase>
+      <armorPenetrationBase>0.16</armorPenetrationBase>
+    </projectile>
+  </ThingDef>
+
+  <ThingDef ParentName="BaseHumanMakeableGun">
+    <defName>Gun_LegendaryMinigun</defName>
+    <label>legendary minigun</label>
+    <thingCategories>
+      <li>WeaponsRanged</li>
+    </thingCategories>
+    <weaponTags>
+      <li>RangedHeavy</li>
+    </weaponTags>
+    <verbs>
+      <li>
+        <defaultProjectile>Bullet_LegendaryMinigun</defaultProjectile>
+        <warmupTime>0.88</warmupTime>
+        <range>30.9</range>
+        <burstShotCount>3</burstShotCount>
+        <ticksBetweenBurstShots>6</ticksBetweenBurstShots>
+      </li>
+    </verbs>
+    <statBases>
+      <RangedWeapon_Cooldown>1.95</RangedWeapon_Cooldown>
+      <AccuracyTouch>0.92</AccuracyTouch>
+      <AccuracyShort>0.85</AccuracyShort>
+      <AccuracyMedium>0.74</AccuracyMedium>
+      <AccuracyLong>0.58</AccuracyLong>
+    </statBases>
+  </ThingDef>
+
+  <ThingDef>
+    <defName>Bullet_LegendaryMinigun</defName>
+    <label>legendary minigun bullet</label>
+    <projectile>
+      <damageDef>Sharp</damageDef>
+      <damageAmountBase>12</damageAmountBase>
+      <armorPenetrationBase>0.18</armorPenetrationBase>
+    </projectile>
+  </ThingDef>
+</Defs>

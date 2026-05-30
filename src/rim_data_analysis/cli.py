@@ -44,6 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     library_parser.add_argument("--scenario-id", action="append", dest="scenario_ids", default=[])
     library_parser.add_argument("--name-contains", type=str, default=None)
 
+    subparsers.add_parser("app", help="launch desktop workbench")
+
     return parser
 
 
@@ -142,6 +144,12 @@ def run_analyze_library(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_app(_args: argparse.Namespace) -> int:
+    from rim_data_analysis.desktop_user_app import main as desktop_main
+
+    return desktop_main()
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -154,6 +162,8 @@ def main() -> int:
         return run_analyze_vanilla(args)
     if args.command == "analyze-library":
         return run_analyze_library(args)
+    if args.command == "app":
+        return run_app(args)
 
     parser.error(f"Unsupported command: {args.command}")
     return 2
