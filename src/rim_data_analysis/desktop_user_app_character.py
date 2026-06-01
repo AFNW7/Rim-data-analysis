@@ -111,13 +111,13 @@ class CharacterEditorMixin:
         self.character_to_scenario_button.pack(fill="x")
 
         header = tk.Frame(main, bg=self.colors["panel"])
-        header.grid(row=0, column=0, columnspan=3, sticky="ew")
+        header.grid(row=0, column=0, columnspan=2, sticky="ew")
         header.grid_columnconfigure(0, weight=1)
         tk.Label(header, textvariable=self.character_mode_title_var, bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).grid(row=0, column=0, sticky="w")
         tk.Label(header, textvariable=self.character_mode_hint_var, bg=self.colors["panel"], fg=self.colors["muted"], font=("Microsoft YaHei UI", 10)).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
         search_bar = tk.Frame(main, bg=self.colors["panel"])
-        search_bar.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(14, 12))
+        search_bar.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(14, 12))
         search_bar.grid_columnconfigure(1, weight=1)
         tk.Label(search_bar, text="搜索", bg=self.colors["panel"], fg=self.colors["muted"]).grid(row=0, column=0, sticky="w", padx=(0, 10))
         search_entry = tk.Entry(search_bar, textvariable=self.character_search_var, bg="#fffdf8", fg=self.colors["ink"], relief="solid", borderwidth=1, highlightthickness=1, highlightbackground=self.colors["line"], highlightcolor=self.colors["accent"])
@@ -125,7 +125,7 @@ class CharacterEditorMixin:
         self.character_search_var.trace_add("write", lambda *_args: self._on_character_search_changed())
 
         self.character_equipment_frame = tk.Frame(main, bg=self.colors["panel"])
-        self.character_equipment_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 12))
+        self.character_equipment_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 12))
         tk.Label(self.character_equipment_frame, text="品质", bg=self.colors["panel"], fg=self.colors["muted"]).grid(row=0, column=0, sticky="w", padx=(0, 8))
         self.character_quality_combo = ttk.Combobox(self.character_equipment_frame, textvariable=self.character_quality_var, state="readonly", style="App.TCombobox", values=[item.label for item in QUALITY_OPTIONS], width=12)
         self.character_quality_combo.grid(row=0, column=1, sticky="w", padx=(0, 14))
@@ -163,22 +163,49 @@ class CharacterEditorMixin:
         self.character_apply_button.pack(fill="x", pady=(12, 10))
 
         saved_panel = self._panel(action_area, padx=12, pady=12)
+        self.character_import_panel = saved_panel
         saved_panel.pack(fill="both", expand=True)
         tk.Label(saved_panel, text="导入已有小人作为基础", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 14, "bold")).pack(anchor="w")
-        tk.Label(saved_panel, text="选中一个已保存人物后，可把它的基础模板、特性、射击等级、武器和衣着完整导入到当前编辑区，再保存为另一个新小人。", bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=240, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(4, 8))
-        self.character_saved_listbox = self._simple_listbox(saved_panel, height=10)
-        self.character_saved_listbox.pack(fill="both", expand=True, pady=(8, 0))
+
+        saved_list_shell = tk.Frame(saved_panel, bg=self.colors["panel"])
+        saved_list_shell.pack(fill="both", expand=True, pady=(8, 0))
+        saved_list_shell.grid_rowconfigure(0, weight=1)
+        saved_list_shell.grid_columnconfigure(0, weight=1)
+        self.character_saved_listbox = self._simple_listbox(saved_list_shell, height=8)
+        self.character_saved_listbox.grid(row=0, column=0, sticky="nsew")
+        saved_list_scrollbar = ttk.Scrollbar(saved_list_shell, orient="vertical", command=self.character_saved_listbox.yview)
+        saved_list_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.character_saved_listbox.configure(yscrollcommand=saved_list_scrollbar.set)
         self.character_saved_listbox.bind("<<ListboxSelect>>", lambda _event: self._update_character_import_preview())
         self.character_saved_listbox.bind("<Double-Button-1>", lambda _event: self._load_selected_character_from_character_page())
-        self.character_saved_preview = tk.Label(saved_panel, textvariable=self.character_import_preview_var, bg=self.colors["panel_alt"], fg=self.colors["ink"], justify="left", anchor="nw", wraplength=240, padx=10, pady=10)
-        self.character_saved_preview.pack(fill="x", pady=(10, 0))
+
+        saved_preview_shell = tk.Frame(saved_panel, bg=self.colors["panel_alt"], highlightthickness=1, highlightbackground=self.colors["line"])
+        saved_preview_shell.pack(fill="both", expand=True, pady=(10, 0))
+        saved_preview_shell.grid_rowconfigure(0, weight=1)
+        saved_preview_shell.grid_columnconfigure(0, weight=1)
+        self.character_saved_preview_text = tk.Text(
+            saved_preview_shell,
+            height=8,
+            wrap="word",
+            bg=self.colors["panel_alt"],
+            fg=self.colors["ink"],
+            relief="flat",
+            borderwidth=0,
+            padx=10,
+            pady=10,
+            font=("Microsoft YaHei UI", 10),
+        )
+        self.character_saved_preview_text.grid(row=0, column=0, sticky="nsew")
+        saved_preview_scrollbar = ttk.Scrollbar(saved_preview_shell, orient="vertical", command=self.character_saved_preview_text.yview)
+        saved_preview_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.character_saved_preview_text.configure(yscrollcommand=saved_preview_scrollbar.set, state="disabled")
         buttons = tk.Frame(saved_panel, bg=self.colors["panel"])
         buttons.pack(fill="x", pady=(10, 0))
         ttk.Button(buttons, text="导入选中人物", style="Subtle.TButton", command=self._load_selected_character_from_character_page).pack(side="left", fill="x", expand=True, padx=(0, 6))
         ttk.Button(buttons, text="切到资源管理", style="Subtle.TButton", command=lambda: self.notebook.select(self.resources_page)).pack(side="left", fill="x", expand=True)
 
         firepower_shell, firepower_panel = self._scrollable_sidebar(main, width=380, padx=14, pady=14)
-        firepower_shell.grid(row=3, column=2, sticky="nsew", padx=(14, 0))
+        firepower_shell.grid(row=0, column=2, rowspan=4, sticky="nsew", padx=(14, 0))
         tk.Label(firepower_panel, text="实时输出能力", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 16, "bold")).pack(anchor="w")
         tk.Label(firepower_panel, text="以下数据按当前人物配置实时刷新，命中率与 DPS 统一按最佳距离档计算；时间按“实战/基础”显示。", bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=330, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(4, 10))
         tk.Label(firepower_panel, textvariable=self.character_power_status_var, bg=self.colors["panel"], fg=self.colors["accent"], justify="left", wraplength=320, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(0, 12))
@@ -240,6 +267,15 @@ class CharacterEditorMixin:
 
     def _on_character_defense_controls_changed(self) -> None:
         self._refresh_character_firepower_preview()
+
+    def _sync_character_import_panel_visibility(self) -> None:
+        if not hasattr(self, "character_import_panel"):
+            return
+        if self.character_mode == "species":
+            if not self.character_import_panel.winfo_manager():
+                self.character_import_panel.pack(fill="both", expand=True)
+        else:
+            self.character_import_panel.pack_forget()
 
     def _set_character_firepower_defaults(self, message: str) -> None:
         self.character_power_status_var.set(message)
@@ -385,6 +421,7 @@ class CharacterEditorMixin:
         self.character_search_syncing = True
         self.character_search_var.set(self.character_search_cache.get(mode, ""))
         self.character_search_syncing = False
+        self._sync_character_import_panel_visibility()
         self._refresh_character_option_list()
 
     def _current_species_option(self) -> SpeciesOption:
