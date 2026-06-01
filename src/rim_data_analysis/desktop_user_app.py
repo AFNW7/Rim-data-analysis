@@ -1,12 +1,13 @@
 ﻿from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 import tkinter as tk
-from tkinter import filedialog, font, messagebox, ttk
+from tkinter import font, messagebox, ttk
 
+from rim_data_analysis import desktop_user_app_pages
+from rim_data_analysis.desktop_user_app_scenario import ScenarioEditorMixin
 from rim_data_analysis.paths import discover_paths
 from rim_data_analysis.user_app_data import (
     CatalogIndex,
@@ -23,7 +24,6 @@ from rim_data_analysis.user_app_data import (
     SUPPORT_GEAR_BY_ID,
     SUPPORT_GEAR_OPTIONS,
     FeatureOption,
-    ImportSettings,
     SavedPawnTemplate,
     SavedScenarioTemplate,
     SpeciesOption,
@@ -33,7 +33,6 @@ from rim_data_analysis.user_app_data import (
     describe_modifier_payload,
     describe_equipment,
     humanlike_species_ids,
-    load_catalog_index,
 )
 
 
@@ -64,7 +63,7 @@ def _join_preview_sections(*sections: tuple[str, list[str] | str | None]) -> str
     return "\n\n".join(blocks)
 
 
-class RimDataAnalysisDesktopApp(tk.Tk):
+class RimDataAnalysisDesktopApp(ScenarioEditorMixin, tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Rim 数据分析")
@@ -121,7 +120,7 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         self.minsize(min_width, min_height)
 
     def _init_vars(self) -> None:
-        self.status_var = tk.StringVar(value="应用已就绪。先到“数据导入”页导入原版数据，然后开始创建人物。")
+        self.status_var = tk.StringVar(value="应用已就绪。第一次使用请先到“数据导入”页导入原版数据。")
 
         self.character_editor_title_var = tk.StringVar(value="新建人物")
         self.character_mode_title_var = tk.StringVar(value="选择基础模板")
@@ -151,6 +150,7 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         self.character_preview_body_var = tk.StringVar(value="点击左侧分类后，在右侧选择内容。")
         self.character_import_preview_var = tk.StringVar(value="从下方已保存人物里选中一个模板后，这里会显示完整配置；可一键导入到编辑区继续微调。")
         self.character_power_status_var = tk.StringVar(value="选择基础模板和武器后，这里会显示实时输出能力。")
+        self.character_flow_var = tk.StringVar(value="第 2 步：导入原版数据后，在这里保存人物模板。")
         self.character_power_metric_vars = {
             "distance": tk.StringVar(value="-"),
             "hit": tk.StringVar(value="-"),
@@ -184,6 +184,7 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         self.scenario_picker_mode_var = tk.StringVar(value="当前添加到：攻击方")
         self.scenario_picker_preview_var = tk.StringVar(value="从下方已保存人物列表中选择一个人物，即可加入攻击方或防守方。")
         self.scenario_picker_search_var = tk.StringVar()
+        self.scenario_flow_var = tk.StringVar(value="第 3 步：先准备人物，再在这里保存场景。")
         self.scenario_metric_vars = {
             "weapon": tk.StringVar(value="-"),
             "hit": tk.StringVar(value="-"),
@@ -198,10 +199,12 @@ class RimDataAnalysisDesktopApp(tk.Tk):
 
         self.compare_status_var = tk.StringVar(value="从左侧选择一个或多个已保存场景，然后加入右侧对比表。")
         self.compare_filter_var = tk.StringVar()
+        self.compare_flow_var = tk.StringVar(value="第 4 步：在这里把已保存场景加入对比表并查看结果。")
 
         self.import_game_data_var = tk.StringVar()
         self.import_workshop_var = tk.StringVar()
         self.import_status_var = tk.StringVar(value="第一版仅支持原版游戏数据导入。")
+        self.import_flow_var = tk.StringVar(value="第 1 步：先导入 RimWorld 原版数据，然后再开始创建人物。")
         self.import_summary_vars = {
             "catalog": tk.StringVar(value="未导入"),
             "weapon_count": tk.StringVar(value="0"),
@@ -662,6 +665,15 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         ttk.Button(button_row, text="保存为新人物", style="Primary.TButton", command=self._save_character).pack(side="left", fill="x", expand=True, padx=(0, 6))
         ttk.Button(button_row, text="新建空白人物", style="Subtle.TButton", command=self._reset_character_editor).pack(side="left", fill="x", expand=True)
 
+        flow_card = tk.Frame(sidebar, bg=self.colors["panel_alt"], padx=12, pady=12, highlightthickness=1, highlightbackground=self.colors["line"])
+        flow_card.pack(fill="x", pady=(14, 0))
+        tk.Label(flow_card, text="当前步骤", bg=self.colors["panel_alt"], fg=self.colors["accent"], font=("Bahnschrift", 12, "bold")).pack(anchor="w")
+        tk.Label(flow_card, textvariable=self.character_flow_var, bg=self.colors["panel_alt"], fg=self.colors["ink"], justify="left", wraplength=300, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(6, 10))
+        self.character_to_import_button = ttk.Button(flow_card, text="返回数据导入", style="Subtle.TButton", command=lambda: self.notebook.select(self.import_page))
+        self.character_to_import_button.pack(fill="x", pady=(0, 6))
+        self.character_to_scenario_button = ttk.Button(flow_card, text="下一步：去场景设计", style="Primary.TButton", command=self._go_to_scenario_page)
+        self.character_to_scenario_button.pack(fill="x")
+
         header = tk.Frame(main, bg=self.colors["panel"])
         header.grid(row=0, column=0, columnspan=3, sticky="ew")
         header.grid_columnconfigure(0, weight=1)
@@ -760,280 +772,16 @@ class RimDataAnalysisDesktopApp(tk.Tk):
             tk.Label(target_panel, textvariable=row_vars["ratio"], bg=self.colors["panel_alt"], fg=self.colors["ink"], font=("Bahnschrift", 11, "bold")).grid(row=index, column=2, sticky="e", pady=(10, 0))
 
     def _build_scenario_page(self) -> None:
-        page = self.scenario_page
-        page.grid_rowconfigure(0, weight=1)
-        page.grid_columnconfigure(1, weight=1)
-
-        sidebar_shell, sidebar = self._scrollable_sidebar(page, width=360, padx=18, pady=18)
-        sidebar_shell.grid(row=0, column=0, sticky="nsew", padx=(0, 14), pady=4)
-
-        main = self._panel(page, padx=18, pady=18)
-        main.grid(row=0, column=1, sticky="nsew", pady=4)
-        main.grid_rowconfigure(2, weight=1)
-        main.grid_rowconfigure(4, weight=1)
-        main.grid_columnconfigure(0, weight=1)
-
-        tk.Label(sidebar, textvariable=self.scenario_editor_title_var, bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).pack(anchor="w")
-        tk.Label(sidebar, text="现在支持一次选择多名攻击方和防守方，并按两两配对自动生成场景。", bg=self.colors["panel"], fg=self.colors["muted"], font=("Microsoft YaHei UI", 10), wraplength=300, justify="left").pack(anchor="w", pady=(4, 14))
-        tk.Label(sidebar, text="场景名称", bg=self.colors["panel"], fg=self.colors["muted"]).pack(anchor="w", pady=(0, 4))
-        self.scenario_name_entry = tk.Entry(
-            sidebar,
-            textvariable=self.scenario_name_var,
-            bg="#fffdf8",
-            fg=self.colors["ink"],
-            relief="solid",
-            borderwidth=1,
-            highlightthickness=1,
-            highlightbackground=self.colors["line"],
-            highlightcolor=self.colors["accent"],
-        )
-        self.scenario_name_entry.pack(fill="x", pady=(0, 4))
-        tk.Label(sidebar, textvariable=self.scenario_name_hint_var, bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=300, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(0, 12))
-        self._sidebar_button(sidebar, title="攻击方人物", summary_var=self.scenario_attacker_status_var, command=lambda: self._set_scenario_picker_mode("attacker"))
-        self.scenario_attacker_listbox = self._simple_listbox(sidebar, height=5)
-        self.scenario_attacker_listbox.pack(fill="x", pady=(6, 0))
-        ttk.Button(sidebar, text="删除选中攻击方", style="Subtle.TButton", command=self._remove_selected_scenario_attacker).pack(fill="x", pady=(6, 12))
-        self._sidebar_button(sidebar, title="防守方人物", summary_var=self.scenario_defender_status_var, command=lambda: self._set_scenario_picker_mode("defender"))
-        self.scenario_defender_listbox = self._simple_listbox(sidebar, height=5)
-        self.scenario_defender_listbox.pack(fill="x", pady=(6, 0))
-        ttk.Button(sidebar, text="删除选中防守方", style="Subtle.TButton", command=self._remove_selected_scenario_defender).pack(fill="x", pady=(6, 12))
-        self._labeled_entry(sidebar, "双方距离", self.scenario_distance_var)
-        self._labeled_entry(sidebar, "最终命中率%", self.scenario_hit_chance_var)
-        tk.Label(sidebar, textvariable=self.scenario_status_var, bg=self.colors["panel"], fg=self.colors["accent"], font=("Microsoft YaHei UI", 10), justify="left", wraplength=300).pack(anchor="w", pady=(8, 14))
-
-        action_row = tk.Frame(sidebar, bg=self.colors["panel"])
-        action_row.pack(fill="x")
-        ttk.Button(action_row, text="保存场景", style="Primary.TButton", command=self._save_scenario).pack(side="left", fill="x", expand=True, padx=(0, 6))
-        ttk.Button(action_row, text="新建空白场景", style="Subtle.TButton", command=self._reset_scenario_editor).pack(side="left", fill="x", expand=True)
-
-        tk.Label(sidebar, text="已保存场景", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 14, "bold")).pack(anchor="w", pady=(18, 8))
-        self.scenario_saved_listbox = self._simple_listbox(sidebar, height=16)
-        self.scenario_saved_listbox.pack(fill="both", expand=True)
-        load_buttons = tk.Frame(sidebar, bg=self.colors["panel"])
-        load_buttons.pack(fill="x", pady=(10, 0))
-        ttk.Button(load_buttons, text="载入选中场景", style="Subtle.TButton", command=self._load_selected_scenario_from_scenario_page).pack(side="left", fill="x", expand=True, padx=(0, 6))
-        ttk.Button(load_buttons, text="加入对比页", style="Subtle.TButton", command=lambda: self.notebook.select(self.compare_page)).pack(side="left", fill="x", expand=True)
-
-        tk.Label(main, text="选择人物", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).grid(row=0, column=0, sticky="w")
-        tk.Label(main, text="先在下方列表选择人物，再加入攻击方或防守方。单组攻防会实时预览，批量组合会自动生成多条场景。", bg=self.colors["panel"], fg=self.colors["muted"], font=("Microsoft YaHei UI", 10), wraplength=920, justify="left").grid(row=1, column=0, sticky="w", pady=(4, 14))
-
-        picker_shell = tk.Frame(main, bg=self.colors["panel"])
-        picker_shell.grid(row=2, column=0, sticky="nsew")
-        picker_shell.grid_rowconfigure(1, weight=1)
-        picker_shell.grid_columnconfigure(0, weight=1)
-        picker_shell.grid_columnconfigure(1, weight=0)
-
-        picker_header = tk.Frame(picker_shell, bg=self.colors["panel"])
-        picker_header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
-        picker_header.grid_columnconfigure(1, weight=1)
-        tk.Label(picker_header, textvariable=self.scenario_picker_mode_var, bg=self.colors["panel"], fg=self.colors["accent"], font=("Bahnschrift", 12, "bold")).grid(row=0, column=0, sticky="w", padx=(0, 14))
-        tk.Label(picker_header, text="搜索人物", bg=self.colors["panel"], fg=self.colors["muted"]).grid(row=0, column=1, sticky="w", padx=(0, 8))
-        search_entry = tk.Entry(
-            picker_header,
-            textvariable=self.scenario_picker_search_var,
-            bg="#fffdf8",
-            fg=self.colors["ink"],
-            relief="solid",
-            borderwidth=1,
-            highlightthickness=1,
-            highlightbackground=self.colors["line"],
-            highlightcolor=self.colors["accent"],
-        )
-        search_entry.grid(row=0, column=2, sticky="ew")
-
-        self.scenario_picker_listbox = self._simple_listbox(picker_shell, height=12)
-        self.scenario_picker_listbox.grid(row=1, column=0, sticky="nsew")
-        self.scenario_picker_listbox.bind("<<ListboxSelect>>", self._update_scenario_picker_preview)
-        self.scenario_picker_listbox.bind("<Double-Button-1>", lambda _event: self._add_selected_pawn_to_scenario())
-
-        picker_side = tk.Frame(picker_shell, bg=self.colors["panel"], width=320)
-        picker_side.grid(row=1, column=1, sticky="ns", padx=(14, 0))
-        picker_side.grid_propagate(False)
-        preview = tk.Frame(picker_side, bg=self.colors["panel_alt"], padx=14, pady=14, highlightthickness=1, highlightbackground=self.colors["line"])
-        preview.pack(fill="both", expand=True)
-        tk.Label(preview, text="人物预览", bg=self.colors["panel_alt"], fg=self.colors["accent"], font=("Bahnschrift", 14, "bold")).pack(anchor="w")
-        tk.Label(preview, textvariable=self.scenario_picker_preview_var, bg=self.colors["panel_alt"], fg=self.colors["ink"], justify="left", wraplength=260, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(8, 0))
-        self.scenario_picker_apply_button = ttk.Button(picker_side, text="加入攻击方", style="Primary.TButton", command=self._add_selected_pawn_to_scenario)
-        self.scenario_picker_apply_button.pack(fill="x", pady=(12, 0))
-
-        cards = tk.Frame(main, bg=self.colors["panel"])
-        cards.grid(row=3, column=0, sticky="nsew", pady=(14, 0))
-        for idx in range(3):
-            cards.grid_columnconfigure(idx, weight=1)
-        metrics = [("当前武器", "weapon"), ("最终命中率", "hit"), ("期望 DPS", "expected_dps"), ("理论 DPS", "theoretical_dps"), ("每次命中期望伤害", "damage_on_hit"), ("护甲减伤率", "armor_reduction"), ("承伤倍率", "taken_multiplier"), ("距离", "distance"), ("穿戴是否合法", "wearable")]
-        for index, (label, key) in enumerate(metrics):
-            row = index // 3
-            column = index % 3
-            self._metric_card(cards, row, column, label, self.scenario_metric_vars[key])
-
-        details_panel = self._panel(main, padx=14, pady=14)
-        details_panel.grid(row=4, column=0, sticky="nsew", pady=(14, 0))
-        details_panel.grid_rowconfigure(1, weight=1)
-        details_panel.grid_columnconfigure(0, weight=1)
-        tk.Label(details_panel, text="计算说明", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 14, "bold")).grid(row=0, column=0, sticky="w")
-        self.scenario_details_text = tk.Text(details_panel, bg="#fffdf8", fg=self.colors["ink"], relief="solid", borderwidth=1, wrap="word", height=10)
-        self.scenario_details_text.grid(row=1, column=0, sticky="nsew", pady=(8, 0))
-        self.scenario_details_text.insert("1.0", self.last_scenario_details)
-        self.scenario_details_text.configure(state="disabled")
-
-        self.scenario_name_var.trace_add("write", lambda *_args: self._schedule_scenario_analysis())
-        self.scenario_distance_var.trace_add("write", lambda *_args: self._schedule_scenario_analysis())
-        self.scenario_hit_chance_var.trace_add("write", lambda *_args: self._schedule_scenario_analysis())
-        self.scenario_picker_search_var.trace_add("write", lambda *_args: self._refresh_scenario_picker_list())
+        ScenarioEditorMixin._build_scenario_page(self)
 
     def _build_compare_page(self) -> None:
-        page = self.compare_page
-        page.grid_rowconfigure(0, weight=1)
-        page.grid_columnconfigure(1, weight=1)
-
-        sidebar_shell, sidebar = self._scrollable_sidebar(page, width=330, padx=18, pady=18)
-        sidebar_shell.grid(row=0, column=0, sticky="nsew", padx=(0, 14), pady=4)
-
-        main = self._panel(page, padx=18, pady=18)
-        main.grid(row=0, column=1, sticky="nsew", pady=4)
-        main.grid_rowconfigure(2, weight=1)
-        main.grid_columnconfigure(0, weight=1)
-
-        tk.Label(sidebar, text="场景导入", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).pack(anchor="w")
-        tk.Label(sidebar, textvariable=self.compare_status_var, bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=280, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(6, 12))
-        self._labeled_entry(sidebar, "筛选场景", self.compare_filter_var)
-        self.compare_filter_var.trace_add("write", lambda *_args: self._refresh_compare_source_list())
-        self.compare_source_listbox = self._simple_listbox(sidebar, height=20, selectmode=tk.MULTIPLE)
-        self.compare_source_listbox.pack(fill="both", expand=True, pady=(8, 0))
-        self._bind_toggle_multiselect(
-            self.compare_source_listbox,
-            double_click_callback=self._analyze_compare_scenario_at_index,
-        )
-
-        action_column = tk.Frame(sidebar, bg=self.colors["panel"])
-        action_column.pack(fill="x", pady=(10, 0))
-        ttk.Button(action_column, text="加入选中场景", style="Primary.TButton", command=self._analyze_selected_compare_scenarios).pack(fill="x", pady=(0, 6))
-        ttk.Button(action_column, text="分析全部场景", style="Subtle.TButton", command=self._analyze_all_compare_scenarios).pack(fill="x", pady=(0, 6))
-        ttk.Button(action_column, text="清空对比表", style="Subtle.TButton", command=self._clear_compare_rows).pack(fill="x", pady=(0, 6))
-        ttk.Button(action_column, text="保存本次结果", style="Subtle.TButton", command=self._save_compare_rows).pack(fill="x")
-
-        tk.Label(main, text="结果对比表", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).grid(row=0, column=0, sticky="w")
-        tk.Label(main, text="点击表头即可按该列升序或降序排序。", bg=self.colors["panel"], fg=self.colors["muted"], font=("Microsoft YaHei UI", 10)).grid(row=1, column=0, sticky="w", pady=(4, 14))
-
-        table_shell = tk.Frame(main, bg=self.colors["panel"])
-        table_shell.grid(row=2, column=0, sticky="nsew")
-        table_shell.grid_rowconfigure(0, weight=1)
-        table_shell.grid_columnconfigure(0, weight=1)
-        columns = [("scenario_name", "场景名称", 180), ("expected_dps", "期望DPS", 100), ("hit_chance_percent", "命中率%", 90), ("expected_damage_on_hit", "命中期望伤害", 120), ("armor_reduction_percent", "护甲减伤%", 100), ("damage_taken_multiplier", "承伤倍率", 90), ("theoretical_dps", "理论DPS", 100), ("distance_cells", "距离", 70), ("attacker_name", "攻击方", 120), ("defender_name", "防守方", 120), ("weapon_name", "武器", 180), ("outfit_valid", "穿戴合法", 90)]
-        self.compare_columns = columns
-        self.compare_tree = ttk.Treeview(table_shell, columns=[column[0] for column in columns], show="headings", style="Compare.Treeview")
-        self.compare_tree.grid(row=0, column=0, sticky="nsew")
-        y_scroll = ttk.Scrollbar(table_shell, orient="vertical", command=self.compare_tree.yview)
-        y_scroll.grid(row=0, column=1, sticky="ns")
-        x_scroll = ttk.Scrollbar(table_shell, orient="horizontal", command=self.compare_tree.xview)
-        x_scroll.grid(row=1, column=0, sticky="ew")
-        self.compare_tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
-        for key, label, width in columns:
-            self.compare_tree.heading(key, text=label, command=lambda c=key: self._sort_compare_rows(c))
-            self.compare_tree.column(key, width=width, anchor="center", stretch=False)
+        desktop_user_app_pages.build_compare_page(self)
 
     def _build_import_page(self) -> None:
-        page = self.import_page
-        page.grid_rowconfigure(0, weight=1)
-        page.grid_columnconfigure(1, weight=1)
-
-        sidebar_shell, sidebar = self._scrollable_sidebar(page, width=380, padx=18, pady=18)
-        sidebar_shell.grid(row=0, column=0, sticky="nsew", padx=(0, 14), pady=4)
-
-        main = self._panel(page, padx=18, pady=18)
-        main.grid(row=0, column=1, sticky="nsew", pady=4)
-        main.grid_rowconfigure(2, weight=1)
-        main.grid_columnconfigure(0, weight=1)
-        main.grid_columnconfigure(1, weight=1)
-
-        tk.Label(sidebar, text="数据导入", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).pack(anchor="w")
-        tk.Label(sidebar, text="只需要告诉应用你的游戏本体位置。第一版先按原版数据工作。", bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=320, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(4, 14))
-        self._path_picker(sidebar, "游戏 Data 目录", self.import_game_data_var, self._browse_game_data_root)
-        self._path_picker(sidebar, "Steam 创意工坊目录", self.import_workshop_var, self._browse_workshop_root)
-
-        note = tk.Frame(sidebar, bg=self.colors["panel_alt"], padx=12, pady=12, highlightthickness=1, highlightbackground=self.colors["line"])
-        note.pack(fill="x", pady=(8, 14))
-        tk.Label(note, text="当前版本说明", bg=self.colors["panel_alt"], fg=self.colors["accent"], font=("Bahnschrift", 12, "bold")).pack(anchor="w")
-        tk.Label(note, text="创意工坊路径先保留，但暂时不会参与分析。完成导入后，人物页的武器、衣着和可识别植入体搜索列表会自动更新。", bg=self.colors["panel_alt"], fg=self.colors["ink"], justify="left", wraplength=300, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(6, 0))
-
-        button_row = tk.Frame(sidebar, bg=self.colors["panel"])
-        button_row.pack(fill="x")
-        ttk.Button(button_row, text="自动检测路径", style="Subtle.TButton", command=self._auto_detect_paths).pack(side="left", fill="x", expand=True, padx=(0, 6))
-        ttk.Button(button_row, text="导入原版数据", style="Primary.TButton", command=self._import_catalog).pack(side="left", fill="x", expand=True)
-        tk.Label(sidebar, textvariable=self.import_status_var, bg=self.colors["panel"], fg=self.colors["accent"], justify="left", wraplength=320, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(14, 0))
-
-        summary = tk.Frame(main, bg=self.colors["panel"])
-        summary.grid(row=0, column=0, columnspan=2, sticky="ew")
-        for idx in range(5):
-            summary.grid_columnconfigure(idx, weight=1)
-        summary_cards = [
-            ("当前目录", self.import_summary_vars["catalog"]),
-            ("武器数量", self.import_summary_vars["weapon_count"]),
-            ("衣着数量", self.import_summary_vars["apparel_count"]),
-            ("植入体数量", self.import_summary_vars["implant_count"]),
-            ("导入时间", self.import_summary_vars["import_time"]),
-        ]
-        for idx, (label, var) in enumerate(summary_cards):
-            self._metric_card(summary, 0, idx, label, var, width=220)
-
-        tk.Label(main, text="武器预览", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(16, 8))
-        tk.Label(main, text="衣着预览", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 16, "bold")).grid(row=1, column=1, sticky="w", pady=(16, 8))
-        self.import_weapon_preview = self._simple_listbox(main, height=20)
-        self.import_weapon_preview.grid(row=2, column=0, sticky="nsew", padx=(0, 8))
-        self.import_apparel_preview = self._simple_listbox(main, height=20)
-        self.import_apparel_preview.grid(row=2, column=1, sticky="nsew", padx=(8, 0))
+        desktop_user_app_pages.build_import_page(self)
 
     def _build_resources_page(self) -> None:
-        page = self.resources_page
-        page.grid_rowconfigure(0, weight=1)
-        page.grid_columnconfigure(0, weight=1)
-        page.grid_columnconfigure(1, weight=1)
-
-        pawns_panel = self._panel(page, padx=18, pady=18)
-        pawns_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=4)
-        pawns_panel.grid_rowconfigure(2, weight=1)
-        pawns_panel.grid_columnconfigure(0, weight=1)
-
-        scenarios_panel = self._panel(page, padx=18, pady=18)
-        scenarios_panel.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=4)
-        scenarios_panel.grid_rowconfigure(2, weight=1)
-        scenarios_panel.grid_columnconfigure(0, weight=1)
-
-        tk.Label(pawns_panel, text="已保存人物", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).grid(row=0, column=0, sticky="w")
-        tk.Label(pawns_panel, text="支持载入编辑和删除预设。", bg=self.colors["panel"], fg=self.colors["muted"], font=("Microsoft YaHei UI", 10)).grid(row=1, column=0, sticky="w", pady=(4, 8))
-        self.resource_pawns_listbox = self._simple_listbox(pawns_panel, height=18, selectmode=tk.MULTIPLE)
-        self.resource_pawns_listbox.grid(row=2, column=0, sticky="nsew")
-        self.resource_pawns_listbox.bind("<<ListboxSelect>>", lambda _event: self._update_resource_pawn_preview())
-        self._bind_toggle_multiselect(
-            self.resource_pawns_listbox,
-            select_callback=lambda _event: self._update_resource_pawn_preview(),
-        )
-
-        self.resource_pawn_preview = tk.Label(pawns_panel, text="选择左侧人物后，这里会显示详情。", bg=self.colors["panel_alt"], fg=self.colors["ink"], justify="left", anchor="nw", wraplength=520, padx=14, pady=14)
-        self.resource_pawn_preview.grid(row=3, column=0, sticky="ew", pady=(12, 0))
-
-        pawn_buttons = tk.Frame(pawns_panel, bg=self.colors["panel"])
-        pawn_buttons.grid(row=4, column=0, sticky="ew", pady=(12, 0))
-        ttk.Button(pawn_buttons, text="载入到人物创建页", style="Subtle.TButton", command=self._load_selected_character_from_resources).pack(side="left", fill="x", expand=True, padx=(0, 6))
-        ttk.Button(pawn_buttons, text="删除选中人物", style="Subtle.TButton", command=self._delete_selected_pawn).pack(side="left", fill="x", expand=True)
-
-        tk.Label(scenarios_panel, text="已保存场景", bg=self.colors["panel"], fg=self.colors["ink"], font=("Bahnschrift", 18, "bold")).grid(row=0, column=0, sticky="w")
-        tk.Label(scenarios_panel, textvariable=self.resource_status_var, bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=520, font=("Microsoft YaHei UI", 10)).grid(row=1, column=0, sticky="w", pady=(4, 8))
-        self.resource_scenarios_listbox = self._simple_listbox(scenarios_panel, height=18, selectmode=tk.MULTIPLE)
-        self.resource_scenarios_listbox.grid(row=2, column=0, sticky="nsew")
-        self.resource_scenarios_listbox.bind("<<ListboxSelect>>", lambda _event: self._update_resource_scenario_preview())
-        self._bind_toggle_multiselect(
-            self.resource_scenarios_listbox,
-            select_callback=lambda _event: self._update_resource_scenario_preview(),
-        )
-
-        self.resource_scenario_preview = tk.Label(scenarios_panel, text="选择左侧场景后，这里会显示详情。", bg=self.colors["panel_alt"], fg=self.colors["ink"], justify="left", anchor="nw", wraplength=520, padx=14, pady=14)
-        self.resource_scenario_preview.grid(row=3, column=0, sticky="ew", pady=(12, 0))
-
-        scenario_buttons = tk.Frame(scenarios_panel, bg=self.colors["panel"])
-        scenario_buttons.grid(row=4, column=0, sticky="ew", pady=(12, 0))
-        ttk.Button(scenario_buttons, text="载入到场景设计页", style="Subtle.TButton", command=self._load_selected_scenario_from_resources).pack(side="left", fill="x", expand=True, padx=(0, 6))
-        ttk.Button(scenario_buttons, text="删除选中场景", style="Subtle.TButton", command=self._delete_selected_scenario).pack(side="left", fill="x", expand=True)
+        desktop_user_app_pages.build_resources_page(self)
 
     def _load_startup_state(self) -> None:
         if not self.import_settings.game_data_root and self.discovered_paths.game_data_root is not None:
@@ -1049,89 +797,36 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         self._refresh_character_firepower_preview()
         if self.import_settings.game_data_root and Path(self.import_settings.game_data_root).exists():
             self._load_catalog_from_settings(show_success=False)
+            self.notebook.select(self.characters_page)
         else:
             self._refresh_import_previews()
+            self.notebook.select(self.import_page)
+            self.status_var.set("第一次使用请先在“数据导入”页选择 RimWorld 目录，然后点击“导入原版数据”。")
+        self._refresh_workflow_guidance()
 
     def _auto_detect_paths(self) -> None:
-        detected = discover_paths()
-        if detected.game_data_root is not None:
-            self.import_game_data_var.set(str(detected.game_data_root))
-        if detected.workshop_root is not None:
-            self.import_workshop_var.set(str(detected.workshop_root))
-        self.status_var.set("已根据本机环境自动检测路径。确认无误后点击“导入原版数据”。")
+        desktop_user_app_pages.auto_detect_paths(self)
 
     def _browse_game_data_root(self) -> None:
-        path = filedialog.askdirectory(title="选择 RimWorld Data 目录")
-        if path:
-            self.import_game_data_var.set(path)
+        desktop_user_app_pages.browse_game_data_root(self)
 
     def _browse_workshop_root(self) -> None:
-        path = filedialog.askdirectory(title="选择 Steam 创意工坊目录")
-        if path:
-            self.import_workshop_var.set(path)
+        desktop_user_app_pages.browse_workshop_root(self)
 
     def _import_catalog(self) -> None:
-        self._load_catalog_from_settings(show_success=True)
+        desktop_user_app_pages.import_catalog(self)
 
     def _load_catalog_from_settings(self, *, show_success: bool) -> None:
-        root = self.import_game_data_var.get().strip()
-        if not root:
-            messagebox.showerror("缺少目录", "请先填写游戏 Data 目录。")
-            return
-        path = Path(root)
-        if not path.exists():
-            messagebox.showerror("目录不存在", "填写的游戏 Data 目录不存在。")
-            return
-        try:
-            self.catalog_index = load_catalog_index(path)
-        except Exception as exc:
-            messagebox.showerror("导入失败", f"读取原版数据时出错：\n{exc}")
-            self.import_status_var.set("导入失败，请检查路径是否直接指向 RimWorld 的 Data 目录。")
-            return
-        self.import_settings = self.store.save_import_settings(
-            ImportSettings(
-                game_data_root=root,
-                workshop_root=self.import_workshop_var.get().strip(),
-                catalog_weapon_count=len(self.catalog_index.catalog.weapons),
-                catalog_apparel_count=len(self.catalog_index.catalog.apparel),
-                catalog_implant_count=len(self.catalog_index.catalog.implants),
-                last_imported_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            )
-        )
-        self._update_import_summary()
-        self._refresh_import_previews()
-        self._refresh_character_option_list()
-        self._refresh_character_firepower_preview()
-        self._run_scenario_analysis()
-        self.status_var.set("原版数据已导入。现在可以到人物创建页选择武器、衣着和植入体。")
-        self.import_status_var.set("导入成功，人物页和场景页已可用。")
-        if show_success:
-            messagebox.showinfo(
-                "导入完成",
-                f"已载入 {len(self.catalog_index.catalog.weapons)} 个武器、"
-                f"{len(self.catalog_index.catalog.apparel)} 件衣着、"
-                f"{len(self.catalog_index.catalog.implants)} 个植入体。",
-            )
+        desktop_user_app_pages.load_catalog_from_settings(self, show_success=show_success)
+
+    def _resolve_game_data_root(self, raw_path: str) -> tuple[Path | None, str | None, str | None]:
+        return desktop_user_app_pages.resolve_game_data_root(self, raw_path)
 
     def _update_import_summary(self) -> None:
-        current_dir = self.import_game_data_var.get().strip() or "未设置"
-        self.import_summary_vars["catalog"].set(current_dir)
-        self.import_summary_vars["weapon_count"].set(str(self.import_settings.catalog_weapon_count))
-        self.import_summary_vars["apparel_count"].set(str(self.import_settings.catalog_apparel_count))
-        self.import_summary_vars["implant_count"].set(str(self.import_settings.catalog_implant_count))
-        self.import_summary_vars["import_time"].set(self.import_settings.last_imported_at or "-")
+        desktop_user_app_pages.update_import_summary(self)
 
     def _refresh_import_previews(self) -> None:
-        self.import_weapon_preview.delete(0, tk.END)
-        self.import_apparel_preview.delete(0, tk.END)
-        if self.catalog_index is None:
-            self.import_weapon_preview.insert(tk.END, "尚未导入任何原版武器。")
-            self.import_apparel_preview.insert(tk.END, "尚未导入任何原版衣着。")
-            return
-        for record in self.catalog_index.catalog.weapons[:60]:
-            self.import_weapon_preview.insert(tk.END, f"{record.display_label} / {record.def_name}")
-        for record in self.catalog_index.catalog.apparel[:60]:
-            self.import_apparel_preview.insert(tk.END, f"{record.display_label} / {record.def_name}")
+        desktop_user_app_pages.refresh_import_previews(self)
 
     def _refresh_saved_data(self) -> None:
         self.saved_pawns = self.store.list_pawns()
@@ -1142,6 +837,7 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         self._refresh_scenario_picker_list()
         self._refresh_compare_source_list()
         self._refresh_resource_lists()
+        self._refresh_workflow_guidance()
 
     def _pawn_display(self, pawn: SavedPawnTemplate) -> str:
         suffix = pawn.id[-6:] if len(pawn.id) >= 6 else pawn.id
@@ -1225,144 +921,6 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         if choice is None:
             return "无"
         return describe_equipment(choice, supports_material=self._equipment_record_supports_material(choice))
-
-    def _refresh_scenario_selection_lists(self) -> None:
-        valid_ids = {pawn.id for pawn in self.saved_pawns}
-        self.scenario_attacker_ids = [
-            pawn_id for pawn_id in dict.fromkeys(self.scenario_attacker_ids) if pawn_id in valid_ids
-        ]
-        self.scenario_defender_ids = [
-            pawn_id for pawn_id in dict.fromkeys(self.scenario_defender_ids) if pawn_id in valid_ids
-        ]
-        if not hasattr(self, "scenario_attacker_listbox"):
-            return
-        self.scenario_attacker_listbox.delete(0, tk.END)
-        self.scenario_defender_listbox.delete(0, tk.END)
-        for pawn_id in self.scenario_attacker_ids:
-            pawn = self._pawn_by_id(pawn_id)
-            if pawn is not None:
-                self.scenario_attacker_listbox.insert(tk.END, self._pawn_display(pawn))
-        for pawn_id in self.scenario_defender_ids:
-            pawn = self._pawn_by_id(pawn_id)
-            if pawn is not None:
-                self.scenario_defender_listbox.insert(tk.END, self._pawn_display(pawn))
-        if not self.scenario_attacker_ids:
-            self.scenario_attacker_status_var.set("未选择攻击方")
-        elif len(self.scenario_attacker_ids) == 1:
-            pawn = self._pawn_by_id(self.scenario_attacker_ids[0])
-            self.scenario_attacker_status_var.set(f"已选择：{pawn.name if pawn else '未知人物'}")
-        else:
-            self.scenario_attacker_status_var.set(f"已选择 {len(self.scenario_attacker_ids)} 名攻击方")
-        if not self.scenario_defender_ids:
-            self.scenario_defender_status_var.set("未选择防守方")
-        elif len(self.scenario_defender_ids) == 1:
-            pawn = self._pawn_by_id(self.scenario_defender_ids[0])
-            self.scenario_defender_status_var.set(f"已选择：{pawn.name if pawn else '未知人物'}")
-        else:
-            self.scenario_defender_status_var.set(f"已选择 {len(self.scenario_defender_ids)} 名防守方")
-        self._sync_scenario_name_state()
-
-    def _sync_scenario_name_state(self) -> None:
-        if not hasattr(self, "scenario_name_entry"):
-            return
-        pair_count = len(self.scenario_attacker_ids) * len(self.scenario_defender_ids)
-        placeholder_prefix = "将自动生成 "
-        current_name = self.scenario_name_var.get().strip()
-        if len(self.scenario_attacker_ids) == 1 and len(self.scenario_defender_ids) == 1:
-            self.scenario_name_entry.configure(state="normal")
-            attacker = self._pawn_by_id(self.scenario_attacker_ids[0])
-            defender = self._pawn_by_id(self.scenario_defender_ids[0])
-            auto_name = (
-                f"{attacker.name} VS {defender.name}"
-                if attacker is not None and defender is not None
-                else "未命名场景"
-            )
-            if not current_name or current_name.startswith(placeholder_prefix):
-                self.scenario_name_var.set(auto_name)
-            self.scenario_name_hint_var.set("当前是单组攻防，可直接修改场景名称。")
-            return
-        self.scenario_name_entry.configure(state="disabled")
-        if pair_count > 0:
-            self.scenario_name_var.set(f"{placeholder_prefix}{pair_count} 个场景")
-            self.scenario_name_hint_var.set(
-                f"批量模式会自动按“攻击方 VS 防守方”命名，当前将生成 {pair_count} 个场景。"
-            )
-        else:
-            self.scenario_name_var.set("")
-            self.scenario_name_hint_var.set("单组攻防可以自定义场景名；批量组合会自动命名为“攻击方 VS 防守方”。")
-
-    def _set_scenario_picker_mode(self, mode: str) -> None:
-        self.scenario_picker_mode = mode
-        if mode == "attacker":
-            self.scenario_picker_mode_var.set("当前添加到：攻击方")
-            self.scenario_picker_apply_button.configure(text="加入攻击方")
-        else:
-            self.scenario_picker_mode_var.set("当前添加到：防守方")
-            self.scenario_picker_apply_button.configure(text="加入防守方")
-
-    def _refresh_scenario_picker_list(self) -> None:
-        if not hasattr(self, "scenario_picker_listbox"):
-            return
-        self.scenario_picker_listbox.delete(0, tk.END)
-        query = self.scenario_picker_search_var.get().strip().lower()
-        for pawn in self.saved_pawns:
-            display = self._pawn_display(pawn)
-            preview_text = self._build_pawn_preview_text(pawn).lower()
-            if query and query not in display.lower() and query not in preview_text:
-                continue
-            self.scenario_picker_listbox.insert(tk.END, display)
-        if self.scenario_picker_listbox.size() > 0:
-            self.scenario_picker_listbox.selection_set(0)
-            self._update_scenario_picker_preview(None)
-        else:
-            self.scenario_picker_preview_var.set("没有匹配的人物。先保存人物模板，或调整搜索词。")
-
-    def _update_scenario_picker_preview(self, _event: object) -> None:
-        if not hasattr(self, "scenario_picker_listbox"):
-            return
-        pawn = self._selected_saved_pawn_from_listbox(self.scenario_picker_listbox)
-        if pawn is None:
-            self.scenario_picker_preview_var.set("从下方已保存人物列表中选择一个人物，即可加入攻击方或防守方。")
-            return
-        self.scenario_picker_preview_var.set(self._build_pawn_preview_text(pawn))
-
-    def _selected_scenario_editor_pawn(self, listbox: tk.Listbox, pawn_ids: list[str]) -> SavedPawnTemplate | None:
-        index = self._single_selected_index(listbox)
-        if index is None or index >= len(pawn_ids):
-            return None
-        return self._pawn_by_id(pawn_ids[index])
-
-    def _add_selected_pawn_to_scenario(self) -> None:
-        pawn = self._selected_saved_pawn_from_listbox(self.scenario_picker_listbox)
-        if pawn is None:
-            messagebox.showerror("没有选择人物", "请先在人物列表中选中一个人物。")
-            return
-        target_ids = self.scenario_attacker_ids if self.scenario_picker_mode == "attacker" else self.scenario_defender_ids
-        if pawn.id in target_ids:
-            self.scenario_status_var.set(f"{pawn.name} 已经在当前列表中，无需重复加入。")
-            return
-        target_ids.append(pawn.id)
-        self._refresh_scenario_selection_lists()
-        self.scenario_status_var.set(f"已将 {pawn.name} 加入{ '攻击方' if self.scenario_picker_mode == 'attacker' else '防守方' }。")
-        self._schedule_scenario_analysis()
-
-    def _remove_selected_scenario_attacker(self) -> None:
-        pawn = self._selected_scenario_editor_pawn(self.scenario_attacker_listbox, self.scenario_attacker_ids)
-        if pawn is None:
-            return
-        self.scenario_attacker_ids = [pawn_id for pawn_id in self.scenario_attacker_ids if pawn_id != pawn.id]
-        self._refresh_scenario_selection_lists()
-        self.scenario_status_var.set(f"已从攻击方移除 {pawn.name}。")
-        self._schedule_scenario_analysis()
-
-    def _remove_selected_scenario_defender(self) -> None:
-        pawn = self._selected_scenario_editor_pawn(self.scenario_defender_listbox, self.scenario_defender_ids)
-        if pawn is None:
-            return
-        self.scenario_defender_ids = [pawn_id for pawn_id in self.scenario_defender_ids if pawn_id != pawn.id]
-        self._refresh_scenario_selection_lists()
-        self.scenario_status_var.set(f"已从防守方移除 {pawn.name}。")
-        self._schedule_scenario_analysis()
 
     def _on_character_search_changed(self) -> None:
         if self.character_search_syncing:
@@ -1501,23 +1059,106 @@ class RimDataAnalysisDesktopApp(tk.Tk):
             row_vars["ratio"].set(f"{target.ratio_to_unarmored * 100.0:.1f}%")
 
     def _refresh_compare_source_list(self) -> None:
-        self.compare_source_listbox.delete(0, tk.END)
-        query = self.compare_filter_var.get().strip().lower()
-        for scenario in self.saved_scenarios:
-            display = self._scenario_display(scenario)
-            if query and query not in display.lower():
-                continue
-            self.compare_source_listbox.insert(tk.END, display)
+        desktop_user_app_pages.refresh_compare_source_list(self)
 
     def _refresh_resource_lists(self) -> None:
-        self.resource_pawns_listbox.delete(0, tk.END)
-        self.resource_scenarios_listbox.delete(0, tk.END)
-        for pawn in self.saved_pawns:
-            self.resource_pawns_listbox.insert(tk.END, self._pawn_display(pawn))
-        for scenario in self.saved_scenarios:
-            self.resource_scenarios_listbox.insert(tk.END, self._scenario_display(scenario))
-        self._update_resource_pawn_preview()
-        self._update_resource_scenario_preview()
+        desktop_user_app_pages.refresh_resource_lists(self)
+
+    def _refresh_workflow_guidance(self) -> None:
+        imported = self.catalog_index is not None
+        pawn_count = len(self.saved_pawns)
+        scenario_count = len(self.saved_scenarios)
+        compare_count = len(self.compare_rows)
+
+        if imported:
+            self.import_flow_var.set(
+                f"第 1 步已完成：已导入原版数据，共载入 {len(self.catalog_index.catalog.weapons)} 个武器、"
+                f"{len(self.catalog_index.catalog.apparel)} 件衣着、{len(self.catalog_index.catalog.implants)} 个植入体。"
+            )
+            self.import_to_characters_button.configure(state="normal")
+        else:
+            self.import_flow_var.set("第 1 步：先导入 RimWorld 原版数据。完成后人物创建、场景设计和结果对比页会自动可用。")
+            self.import_to_characters_button.configure(state="disabled")
+
+        if not imported:
+            self.character_flow_var.set("当前还没有导入原版数据。请先回到“数据导入”页完成第 1 步。")
+            self.character_to_import_button.configure(state="normal")
+            self.character_to_scenario_button.configure(state="disabled")
+        elif pawn_count == 0:
+            self.character_flow_var.set("第 2 步：先保存至少 1 个人物模板。保存后可以继续补更多人物，也可以前往“场景设计”开始配对测试。")
+            self.character_to_import_button.configure(state="normal")
+            self.character_to_scenario_button.configure(state="disabled")
+        else:
+            self.character_flow_var.set(
+                f"第 2 步进行中：当前已保存 {pawn_count} 个人物模板。可以继续补人物，或前往“场景设计”把它们组合成测试场景。"
+            )
+            self.character_to_import_button.configure(state="normal")
+            self.character_to_scenario_button.configure(state="normal")
+
+        if not imported:
+            self.scenario_flow_var.set("当前还没有导入原版数据。请先完成第 1 步。")
+            self.scenario_to_characters_button.configure(state="normal")
+            self.scenario_to_compare_button.configure(state="disabled")
+        elif pawn_count == 0:
+            self.scenario_flow_var.set("当前还没有已保存人物。请先去“人物创建”页保存攻击方或防守方模板。")
+            self.scenario_to_characters_button.configure(state="normal")
+            self.scenario_to_compare_button.configure(state="disabled")
+        elif scenario_count == 0:
+            self.scenario_flow_var.set("第 3 步：从已保存人物中选择攻击方和防守方，保存 1 个或多个测试场景。")
+            self.scenario_to_characters_button.configure(state="normal")
+            self.scenario_to_compare_button.configure(state="disabled")
+        else:
+            self.scenario_flow_var.set(
+                f"第 3 步进行中：当前已保存 {scenario_count} 个场景。你可以继续补场景，或前往“结果对比”查看横向结果。"
+            )
+            self.scenario_to_characters_button.configure(state="normal")
+            self.scenario_to_compare_button.configure(state="normal")
+
+        if not imported:
+            self.compare_flow_var.set("当前还没有导入原版数据。请先完成第 1 步，然后再创建人物和场景。")
+            self.compare_to_scenario_button.configure(state="normal")
+        elif scenario_count == 0:
+            self.compare_flow_var.set("当前还没有已保存场景。请先去“场景设计”页保存至少 1 个场景。")
+            self.compare_to_scenario_button.configure(state="normal")
+        elif compare_count == 0:
+            self.compare_flow_var.set(
+                f"第 4 步：当前已保存 {scenario_count} 个场景。先从左侧加入场景到右侧对比表，再按列排序比较输出和承伤能力。"
+            )
+            self.compare_to_scenario_button.configure(state="normal")
+        else:
+            self.compare_flow_var.set(
+                f"第 4 步进行中：当前对比表里有 {compare_count} 条结果，已保存场景 {scenario_count} 个。可以继续加入更多场景，或保存本次结果。"
+            )
+            self.compare_to_scenario_button.configure(state="normal")
+
+    def _go_to_characters_page(self) -> None:
+        if self.catalog_index is None:
+            messagebox.showerror("尚未导入数据", "请先在“数据导入”页完成原版数据导入。")
+            self.notebook.select(self.import_page)
+            return
+        self.notebook.select(self.characters_page)
+
+    def _go_to_scenario_page(self) -> None:
+        if self.catalog_index is None:
+            messagebox.showerror("尚未导入数据", "请先在“数据导入”页完成原版数据导入。")
+            self.notebook.select(self.import_page)
+            return
+        if not self.saved_pawns:
+            messagebox.showerror("还没有人物", "请先在“人物创建”页保存至少 1 个人物模板。")
+            self.notebook.select(self.characters_page)
+            return
+        self.notebook.select(self.scenario_page)
+
+    def _go_to_compare_page(self) -> None:
+        if self.catalog_index is None:
+            messagebox.showerror("尚未导入数据", "请先在“数据导入”页完成原版数据导入。")
+            self.notebook.select(self.import_page)
+            return
+        if not self.saved_scenarios:
+            messagebox.showerror("还没有场景", "请先在“场景设计”页保存至少 1 个场景。")
+            self.notebook.select(self.scenario_page)
+            return
+        self.notebook.select(self.compare_page)
 
     def _set_character_mode(self, mode: str) -> None:
         self.character_mode = mode
@@ -2139,10 +1780,7 @@ class RimDataAnalysisDesktopApp(tk.Tk):
             self._load_character_into_editor(pawn)
 
     def _load_selected_character_from_resources(self) -> None:
-        pawn = self._require_single_saved_pawn(self.resource_pawns_listbox, action_label="载入到人物创建页")
-        if pawn is not None:
-            self._load_character_into_editor(pawn)
-            self.notebook.select(self.characters_page)
+        desktop_user_app_pages.load_selected_character_from_resources(self)
 
     def _selected_saved_scenarios_from_listbox(self, listbox: tk.Listbox) -> list[SavedScenarioTemplate]:
         displays = [listbox.get(index) for index in self._selected_indices(listbox)]
@@ -2174,28 +1812,8 @@ class RimDataAnalysisDesktopApp(tk.Tk):
             return None
         return scenarios[0]
 
-    def _load_scenario_into_editor(self, scenario: SavedScenarioTemplate) -> None:
-        self.current_scenario_id = scenario.id
-        self.scenario_editor_title_var.set(f"编辑场景：{scenario.name}")
-        self.scenario_name_var.set(scenario.name)
-        self.scenario_attacker_ids = [scenario.attacker_pawn_id]
-        self.scenario_defender_ids = [scenario.defender_pawn_id]
-        self._refresh_scenario_selection_lists()
-        self.scenario_distance_var.set(str(scenario.distance_cells))
-        self.scenario_hit_chance_var.set(f"{scenario.hit_chance_percent:.0f}")
-        self.status_var.set(f"已载入场景“{scenario.name}”。")
-        self._schedule_scenario_analysis()
-
-    def _load_selected_scenario_from_scenario_page(self) -> None:
-        scenario = self._require_single_saved_scenario(self.scenario_saved_listbox, action_label="载入选中场景")
-        if scenario is not None:
-            self._load_scenario_into_editor(scenario)
-
     def _load_selected_scenario_from_resources(self) -> None:
-        scenario = self._require_single_saved_scenario(self.resource_scenarios_listbox, action_label="载入到场景设计页")
-        if scenario is not None:
-            self._load_scenario_into_editor(scenario)
-            self.notebook.select(self.scenario_page)
+        desktop_user_app_pages.load_selected_scenario_from_resources(self)
 
     def _resolve_pawn_id_from_display(self, display: str) -> str | None:
         for pawn in self.saved_pawns:
@@ -2238,200 +1856,6 @@ class RimDataAnalysisDesktopApp(tk.Tk):
             self.character_material_combo.grid_remove()
             self.character_material_var.set("")
 
-    def _current_scenario_pairs(self) -> list[tuple[SavedPawnTemplate, SavedPawnTemplate]]:
-        pairs: list[tuple[SavedPawnTemplate, SavedPawnTemplate]] = []
-        seen_pair_ids: set[tuple[str, str]] = set()
-        for attacker_id in dict.fromkeys(self.scenario_attacker_ids):
-            attacker = self._pawn_by_id(attacker_id)
-            if attacker is None:
-                continue
-            for defender_id in dict.fromkeys(self.scenario_defender_ids):
-                pair_ids = (attacker_id, defender_id)
-                if pair_ids in seen_pair_ids:
-                    continue
-                defender = self._pawn_by_id(defender_id)
-                if defender is None:
-                    continue
-                seen_pair_ids.add(pair_ids)
-                pairs.append((attacker, defender))
-        return pairs
-
-    def _schedule_scenario_analysis(self) -> None:
-        if self.scenario_analysis_after_id is not None:
-            self.after_cancel(self.scenario_analysis_after_id)
-        self.scenario_analysis_after_id = self.after(220, self._run_scenario_analysis)
-
-    def _set_text(self, widget: tk.Text, value: str) -> None:
-        widget.configure(state="normal")
-        widget.delete("1.0", tk.END)
-        widget.insert("1.0", value)
-        widget.configure(state="disabled")
-
-    def _set_scenario_metric_defaults(self) -> None:
-        for var in self.scenario_metric_vars.values():
-            var.set("-")
-        self.last_scenario_details = "等待有效场景。"
-        self._set_text(self.scenario_details_text, self.last_scenario_details)
-
-    def _run_scenario_analysis(self) -> None:
-        self.scenario_analysis_after_id = None
-        if self.catalog_index is None:
-            self.scenario_status_var.set("请先去“数据导入”页导入原版数据。")
-            self._set_scenario_metric_defaults()
-            return
-        pairs = self._current_scenario_pairs()
-        if not pairs:
-            self.scenario_status_var.set("请至少选择 1 名攻击方和 1 名防守方。")
-            self._set_scenario_metric_defaults()
-            return
-        try:
-            distance = max(1, int(self.scenario_distance_var.get().strip()))
-            hit = float(self.scenario_hit_chance_var.get().strip())
-        except ValueError:
-            self.scenario_status_var.set("距离必须是整数，命中率必须是数字。")
-            self._set_scenario_metric_defaults()
-            return
-        attacker, defender = pairs[0]
-        if len(pairs) == 1:
-            scenario_name = self.scenario_name_var.get().strip() or f"{attacker.name} VS {defender.name}"
-        else:
-            scenario_name = f"{attacker.name} VS {defender.name}"
-        scenario = SavedScenarioTemplate(
-            id=self.current_scenario_id or "preview-scenario",
-            name=scenario_name,
-            attacker_pawn_id=attacker.id,
-            defender_pawn_id=defender.id,
-            distance_cells=distance,
-            hit_chance_percent=hit,
-        )
-        try:
-            analysis, row = build_analysis_for_saved_scenario(scenario, {pawn.id: pawn for pawn in self.saved_pawns}, self.catalog_index)
-        except Exception as exc:
-            self.scenario_status_var.set(str(exc))
-            self._set_scenario_metric_defaults()
-            return
-        if len(pairs) == 1:
-            self.scenario_status_var.set("结果已按当前场景实时刷新。")
-        else:
-            self.scenario_status_var.set(
-                f"当前共 {len(self.scenario_attacker_ids)} × {len(self.scenario_defender_ids)} 个组合，右侧先预览第一组：{attacker.name} VS {defender.name}。"
-            )
-        self.scenario_metric_vars["weapon"].set(row.weapon_name)
-        self.scenario_metric_vars["hit"].set(f"{row.hit_chance_percent:.2f}%")
-        self.scenario_metric_vars["expected_dps"].set(f"{row.expected_dps:.4f}")
-        self.scenario_metric_vars["theoretical_dps"].set(f"{row.theoretical_dps:.4f}")
-        self.scenario_metric_vars["damage_on_hit"].set(f"{row.expected_damage_on_hit:.4f}")
-        self.scenario_metric_vars["armor_reduction"].set(f"{row.armor_reduction_percent:.2f}%")
-        self.scenario_metric_vars["taken_multiplier"].set(f"{row.damage_taken_multiplier:.4f}")
-        self.scenario_metric_vars["distance"].set(str(row.distance_cells))
-        self.scenario_metric_vars["wearable"].set("合法" if row.outfit_valid else "冲突")
-        self.last_scenario_details = (
-            f"攻击方：{row.attacker_name}\n防守方：{row.defender_name}\n武器：{row.weapon_name}\n"
-            f"最终命中率：{row.hit_chance_percent:.2f}%\n期望DPS：{row.expected_dps:.4f}\n理论DPS：{row.theoretical_dps:.4f}\n"
-            f"命中期望伤害：{row.expected_damage_on_hit:.4f}\n护甲减伤率：{row.armor_reduction_percent:.2f}%\n"
-            f"承伤倍率：{row.damage_taken_multiplier:.4f}\n穿戴合法：{'是' if row.outfit_valid else '否'}"
-        )
-        self._set_text(self.scenario_details_text, self.last_scenario_details)
-
-    def _save_scenario(self) -> None:
-        pairs = self._current_scenario_pairs()
-        if not pairs:
-            messagebox.showerror("缺少人物", "请至少选择 1 名攻击方和 1 名防守方。")
-            return
-        try:
-            distance = max(1, int(self.scenario_distance_var.get().strip()))
-            hit = float(self.scenario_hit_chance_var.get().strip())
-        except ValueError:
-            messagebox.showerror("输入错误", "距离必须是整数，命中率必须是数字。")
-            return
-        if len(pairs) == 1:
-            attacker, defender = pairs[0]
-            name = self.scenario_name_var.get().strip() or f"{attacker.name} VS {defender.name}"
-            existing = self.store.find_scenario_by_signature(
-                attacker_pawn_id=attacker.id,
-                defender_pawn_id=defender.id,
-                distance_cells=distance,
-                hit_chance_percent=hit,
-                exclude_id=self.current_scenario_id,
-            )
-            if existing is not None and self.current_scenario_id is None:
-                self.current_scenario_id = existing.id
-                self.scenario_editor_title_var.set(f"编辑场景：{existing.name}")
-                self._refresh_saved_data()
-                self.scenario_status_var.set(f"同条件场景“{existing.name}”已存在，未重复保存。")
-                self.status_var.set(f"检测到已存在场景“{existing.name}”，本次未重复生成。")
-                return
-            if existing is not None and self.current_scenario_id is not None:
-                messagebox.showerror(
-                    "场景重复",
-                    "已存在另一条相同攻防组合且距离、命中率相同的场景。请直接使用已有场景，或修改参数后再保存。",
-                )
-                return
-            scenario = SavedScenarioTemplate(
-                id=self.current_scenario_id or self.store.make_id(name),
-                name=name,
-                attacker_pawn_id=attacker.id,
-                defender_pawn_id=defender.id,
-                distance_cells=distance,
-                hit_chance_percent=hit,
-            )
-            saved = self.store.save_scenario(scenario)
-            self.current_scenario_id = saved.id
-            self.scenario_editor_title_var.set(f"编辑场景：{saved.name}")
-            self._refresh_saved_data()
-            self.scenario_status_var.set(f"场景“{saved.name}”已保存。")
-            self.status_var.set(f"场景“{saved.name}”已保存。")
-            return
-        saved_count = 0
-        skipped_count = 0
-        for attacker, defender in pairs:
-            existing = self.store.find_scenario_by_signature(
-                attacker_pawn_id=attacker.id,
-                defender_pawn_id=defender.id,
-                distance_cells=distance,
-                hit_chance_percent=hit,
-            )
-            if existing is not None:
-                skipped_count += 1
-                continue
-            auto_name = f"{attacker.name} VS {defender.name}"
-            scenario = SavedScenarioTemplate(
-                id=self.store.make_id(auto_name),
-                name=auto_name,
-                attacker_pawn_id=attacker.id,
-                defender_pawn_id=defender.id,
-                distance_cells=distance,
-                hit_chance_percent=hit,
-            )
-            self.store.save_scenario(scenario)
-            saved_count += 1
-        self.current_scenario_id = None
-        self.scenario_editor_title_var.set("新建场景")
-        self._refresh_saved_data()
-        if skipped_count > 0 and saved_count > 0:
-            self.scenario_status_var.set(f"已新增 {saved_count} 个唯一场景，跳过 {skipped_count} 个重复组合。")
-            self.status_var.set(f"批量场景已生成：新增 {saved_count}，跳过重复 {skipped_count}。")
-        elif skipped_count > 0:
-            self.scenario_status_var.set(f"当前这组攻防场景已全部存在，未重复生成。共跳过 {skipped_count} 个组合。")
-            self.status_var.set(f"未生成新场景：{skipped_count} 个组合已存在。")
-        else:
-            self.scenario_status_var.set(f"已批量保存 {saved_count} 个唯一场景。")
-            self.status_var.set(f"已批量保存 {saved_count} 个唯一场景。")
-
-    def _reset_scenario_editor(self) -> None:
-        self.current_scenario_id = None
-        self.scenario_editor_title_var.set("新建场景")
-        self.scenario_name_var.set("")
-        self.scenario_attacker_ids = []
-        self.scenario_defender_ids = []
-        self.scenario_distance_var.set("12")
-        self.scenario_hit_chance_var.set("100")
-        self._refresh_scenario_selection_lists()
-        self._set_scenario_picker_mode("attacker")
-        self.scenario_status_var.set("请选择双方人物模板。")
-        self._set_scenario_metric_defaults()
-        self.status_var.set("场景编辑器已重置。")
-
     def _comparison_rows_for_scenarios(self, scenarios: list[SavedScenarioTemplate]) -> list[ComparisonRow]:
         if self.catalog_index is None:
             raise ValueError("请先导入原版数据。")
@@ -2443,100 +1867,31 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         return rows
 
     def _selected_compare_scenarios(self) -> list[SavedScenarioTemplate]:
-        displays = [self.compare_source_listbox.get(index) for index in self.compare_source_listbox.curselection()]
-        scenarios: list[SavedScenarioTemplate] = []
-        for display in displays:
-            for scenario in self.saved_scenarios:
-                if self._scenario_display(scenario) == display:
-                    scenarios.append(scenario)
-                    break
-        return scenarios
+        return desktop_user_app_pages.selected_compare_scenarios(self)
 
     def _scenario_from_compare_source_index(self, index: int) -> SavedScenarioTemplate | None:
-        if index < 0 or index >= self.compare_source_listbox.size():
-            return None
-        display = self.compare_source_listbox.get(index)
-        for scenario in self.saved_scenarios:
-            if self._scenario_display(scenario) == display:
-                return scenario
-        return None
+        return desktop_user_app_pages.scenario_from_compare_source_index(self, index)
 
     def _merge_compare_rows(self, new_rows: list[ComparisonRow]) -> None:
-        by_id = {row.scenario_id: row for row in self.compare_rows}
-        for row in new_rows:
-            by_id[row.scenario_id] = row
-        self.compare_rows = list(by_id.values())
-        self._apply_compare_sort()
-        self._refresh_compare_table()
+        desktop_user_app_pages.merge_compare_rows(self, new_rows)
 
     def _analyze_selected_compare_scenarios(self) -> None:
-        scenarios = self._selected_compare_scenarios()
-        if not scenarios:
-            messagebox.showerror("没有选择场景", "请先在左侧场景列表中选择至少一个场景。")
-            return
-        try:
-            rows = self._comparison_rows_for_scenarios(scenarios)
-        except Exception as exc:
-            messagebox.showerror("计算失败", str(exc))
-            return
-        self._merge_compare_rows(rows)
-        self.compare_status_var.set(f"已将 {len(rows)} 个场景加入对比表。")
-        self.status_var.set("结果对比表已刷新。")
+        desktop_user_app_pages.analyze_selected_compare_scenarios(self)
 
     def _analyze_compare_scenario_at_index(self, index: int) -> None:
-        scenario = self._scenario_from_compare_source_index(index)
-        if scenario is None:
-            return
-        try:
-            rows = self._comparison_rows_for_scenarios([scenario])
-        except Exception as exc:
-            messagebox.showerror("计算失败", str(exc))
-            return
-        self._merge_compare_rows(rows)
-        self.compare_status_var.set(f"已将场景“{scenario.name}”加入对比表。")
-        self.status_var.set("结果对比表已刷新。")
+        desktop_user_app_pages.analyze_compare_scenario_at_index(self, index)
 
     def _analyze_all_compare_scenarios(self) -> None:
-        if not self.saved_scenarios:
-            messagebox.showerror("没有场景", "当前还没有任何已保存场景。")
-            return
-        try:
-            rows = self._comparison_rows_for_scenarios(self.saved_scenarios)
-        except Exception as exc:
-            messagebox.showerror("计算失败", str(exc))
-            return
-        self.compare_rows = rows
-        self._apply_compare_sort()
-        self._refresh_compare_table()
-        self.compare_status_var.set(f"已分析全部 {len(rows)} 个场景。")
-        self.status_var.set("全部场景的对比结果已生成。")
+        desktop_user_app_pages.analyze_all_compare_scenarios(self)
 
     def _clear_compare_rows(self) -> None:
-        self.compare_rows = []
-        self._refresh_compare_table()
-        self.compare_status_var.set("对比表已清空。")
+        desktop_user_app_pages.clear_compare_rows(self)
 
     def _save_compare_rows(self) -> None:
-        if not self.compare_rows:
-            messagebox.showerror("没有结果", "请先生成至少一条对比结果。")
-            return
-        output = self.store.save_result_rows(self.compare_rows, label="comparison-results")
-        self.status_var.set("对比结果已自动保存到应用数据目录。")
-        messagebox.showinfo("保存完成", f"本次结果已保存。\n{output}")
+        desktop_user_app_pages.save_compare_rows(self)
 
     def _refresh_compare_table(self) -> None:
-        self.compare_tree.delete(*self.compare_tree.get_children())
-        for row in self.compare_rows:
-            values = []
-            for key, _label, _width in self.compare_columns:
-                raw = getattr(row, key)
-                if key == "outfit_valid":
-                    values.append("是" if raw else "否")
-                elif isinstance(raw, float):
-                    values.append(f"{raw:.2f}" if key.endswith("percent") else f"{raw:.4f}")
-                else:
-                    values.append(raw)
-            self.compare_tree.insert("", tk.END, values=values)
+        desktop_user_app_pages.refresh_compare_table(self)
 
     def _sort_compare_rows(self, column: str) -> None:
         if self.compare_sort_column == column:
@@ -2552,60 +1907,16 @@ class RimDataAnalysisDesktopApp(tk.Tk):
         self.compare_rows.sort(key=lambda row: getattr(row, key), reverse=self.compare_sort_reverse)
 
     def _update_resource_pawn_preview(self) -> None:
-        pawn = self._selected_saved_pawn_from_listbox(self.resource_pawns_listbox)
-        if pawn is None:
-            self.resource_pawn_preview.configure(text="选择左侧人物后，这里会显示详情。")
-            return
-        self.resource_pawn_preview.configure(text=self._build_pawn_preview_text(pawn))
+        desktop_user_app_pages.update_resource_pawn_preview(self)
 
     def _update_resource_scenario_preview(self) -> None:
-        scenario = self._selected_saved_scenario_from_listbox(self.resource_scenarios_listbox)
-        if scenario is None:
-            self.resource_scenario_preview.configure(text="选择左侧场景后，这里会显示详情。")
-            return
-        attacker = next((pawn for pawn in self.saved_pawns if pawn.id == scenario.attacker_pawn_id), None)
-        defender = next((pawn for pawn in self.saved_pawns if pawn.id == scenario.defender_pawn_id), None)
-        preview = [f"场景名称：{scenario.name}", f"攻击方：{attacker.name if attacker else scenario.attacker_pawn_id}", f"防守方：{defender.name if defender else scenario.defender_pawn_id}", f"距离：{scenario.distance_cells}", f"最终命中率%：{scenario.hit_chance_percent:.0f}"]
-        self.resource_scenario_preview.configure(text="\n".join(preview))
+        desktop_user_app_pages.update_resource_scenario_preview(self)
 
     def _delete_selected_pawn(self) -> None:
-        pawns = self._selected_saved_pawns_from_listbox(self.resource_pawns_listbox)
-        if not pawns:
-            return
-        if len(pawns) == 1:
-            prompt = f"要删除人物“{pawns[0].name}”吗？"
-        else:
-            prompt = f"要删除选中的 {len(pawns)} 个人物吗？"
-        if not messagebox.askyesno("确认删除", prompt):
-            return
-        deleted_count = 0
-        failures: list[str] = []
-        for pawn in pawns:
-            try:
-                self.store.delete_pawn(pawn.id)
-                deleted_count += 1
-            except Exception as exc:
-                failures.append(f"{pawn.name}：{exc}")
-        self._refresh_saved_data()
-        if deleted_count > 0:
-            self.status_var.set(f"已删除 {deleted_count} 个人物。")
-        if failures:
-            messagebox.showerror("部分人物无法删除", "\n".join(failures))
+        desktop_user_app_pages.delete_selected_pawn(self)
 
     def _delete_selected_scenario(self) -> None:
-        scenarios = self._selected_saved_scenarios_from_listbox(self.resource_scenarios_listbox)
-        if not scenarios:
-            return
-        if len(scenarios) == 1:
-            prompt = f"要删除场景“{scenarios[0].name}”吗？"
-        else:
-            prompt = f"要删除选中的 {len(scenarios)} 个场景吗？"
-        if not messagebox.askyesno("确认删除", prompt):
-            return
-        for scenario in scenarios:
-            self.store.delete_scenario(scenario.id)
-        self._refresh_saved_data()
-        self.status_var.set(f"已删除 {len(scenarios)} 个场景。")
+        desktop_user_app_pages.delete_selected_scenario(self)
 
 
 def main() -> int:
