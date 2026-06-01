@@ -1,5 +1,6 @@
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .venv/
 build/
 dist/
@@ -7,7 +8,13 @@ dist/
 artifacts/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .env
+.env.*
+!.env.example
 .tmp/
 .tmp-test/
-
+.DS_Store
+Thumbs.db
+/计算模型/

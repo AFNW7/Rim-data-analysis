@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rim-data-analysis"
-version = "0.1.0"
-description = "RimWorld and Workshop mod metadata analysis toolkit."
+version = "1.0.0"
+description = "Desktop analysis tool for RimWorld vanilla combat scenarios."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -21,7 +21,6 @@ dev = [
 
 [project.scripts]
 rim-analysis = "rim_data_analysis.cli:main"
-rim-analysis-app = "rim_data_analysis.desktop_user_app:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
