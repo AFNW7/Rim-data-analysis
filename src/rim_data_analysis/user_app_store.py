@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -63,6 +65,23 @@ def _read_json(path: Path) -> dict[str, object]:
     return payload
 
 
+def default_app_data_root() -> Path:
+    override = os.getenv("RIM_DATA_ANALYSIS_APP_STATE_DIR")
+    if override:
+        return Path(override).expanduser()
+    appdata = os.getenv("APPDATA")
+    if appdata:
+        return Path(appdata) / "RimDataAnalysis"
+    return Path.home() / ".rim-data-analysis"
+
+
+def _migrate_legacy_state(legacy_root: Path, target_root: Path) -> None:
+    if target_root.exists() or not legacy_root.exists():
+        return
+    target_root.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(legacy_root, target_root)
+
+
 class UserAppStore:
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -81,7 +100,9 @@ class UserAppStore:
 
     @classmethod
     def for_repo(cls, repo_root: Path) -> "UserAppStore":
-        return cls(repo_root / "artifacts" / "app-state")
+        root = default_app_data_root()
+        _migrate_legacy_state(repo_root / "artifacts" / "app-state", root)
+        return cls(root)
 
     def _pawn_path(self, template_id: str) -> Path:
         return self.pawns_dir / f"{template_id}.json"
@@ -124,6 +145,23 @@ class UserAppStore:
             names = "、".join(item.name for item in dependencies[:3])
             raise ValueError(f"该人物已被场景使用：{names}")
         self._pawn_path(template_id).unlink(missing_ok=True)
+
+    def rename_pawn(self, template_id: str, new_name: str) -> SavedPawnTemplate:
+        pawn = self.load_pawn(template_id)
+        renamed = SavedPawnTemplate(
+            id=pawn.id,
+            name=new_name.strip() or pawn.name,
+            species_id=pawn.species_id,
+            feature_ids=list(pawn.feature_ids),
+            support_gear_ids=list(pawn.support_gear_ids),
+            implant_ids=list(pawn.implant_ids),
+            shooting_skill=pawn.shooting_skill,
+            melee_skill=pawn.melee_skill,
+            full_body_armor_percent=pawn.full_body_armor_percent,
+            weapon=pawn.weapon,
+            apparel=list(pawn.apparel),
+        )
+        return self.save_pawn(renamed)
 
     def list_scenarios(self) -> list[SavedScenarioTemplate]:
         return sorted(
@@ -178,6 +216,30 @@ class UserAppStore:
 
     def delete_scenario(self, template_id: str) -> None:
         self._scenario_path(template_id).unlink(missing_ok=True)
+
+    def rename_scenario(self, template_id: str, new_name: str) -> SavedScenarioTemplate:
+        scenario = self.load_scenario(template_id)
+        renamed = SavedScenarioTemplate(
+            id=scenario.id,
+            name=new_name.strip() or scenario.name,
+            attacker_pawn_id=scenario.attacker_pawn_id,
+            defender_pawn_id=scenario.defender_pawn_id,
+            distance_cells=scenario.distance_cells,
+            hit_chance_percent=scenario.hit_chance_percent,
+        )
+        return self.save_scenario(renamed)
+
+    def delete_duplicate_scenarios(self) -> int:
+        seen_signatures: set[tuple[str, str, int, float]] = set()
+        deleted_count = 0
+        for scenario in self.list_scenarios():
+            signature = self.scenario_signature(scenario)
+            if signature not in seen_signatures:
+                seen_signatures.add(signature)
+                continue
+            self.delete_scenario(scenario.id)
+            deleted_count += 1
+        return deleted_count
 
     def load_import_settings(self) -> ImportSettings:
         path = self._settings_path()

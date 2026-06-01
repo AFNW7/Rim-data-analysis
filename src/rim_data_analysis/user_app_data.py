@@ -47,6 +47,7 @@ from rim_data_analysis.user_app_store import (
     _nonce_slug as _store_nonce_slug,
     _slugify,
     _timestamp_slug as _store_timestamp_slug,
+    default_app_data_root,
 )
 
 

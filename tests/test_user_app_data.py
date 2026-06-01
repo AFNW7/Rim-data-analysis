@@ -230,6 +230,72 @@ def test_delete_pawn_blocked_when_used_by_scenario() -> None:
         raise AssertionError("expected ValueError")
 
 
+def test_store_renames_saved_pawn_and_scenario() -> None:
+    store = UserAppStore(_store_root("rename-presets"))
+    pawn = store.save_pawn(
+        SavedPawnTemplate(
+            id="pawn-rename",
+            name="old pawn",
+            species_id="human_baseliner",
+        )
+    )
+    scenario = store.save_scenario(
+        SavedScenarioTemplate(
+            id="scenario-rename",
+            name="old scenario",
+            attacker_pawn_id=pawn.id,
+            defender_pawn_id=pawn.id,
+        )
+    )
+
+    renamed_pawn = store.rename_pawn(pawn.id, "new pawn")
+    renamed_scenario = store.rename_scenario(scenario.id, "new scenario")
+
+    assert renamed_pawn.name == "new pawn"
+    assert store.load_pawn(pawn.id).name == "new pawn"
+    assert renamed_scenario.name == "new scenario"
+    assert store.load_scenario(scenario.id).name == "new scenario"
+
+
+def test_store_deletes_duplicate_scenarios_by_signature() -> None:
+    store = UserAppStore(_store_root("dedupe-scenarios"))
+    store.save_scenario(
+        SavedScenarioTemplate(
+            id="scenario-a",
+            name="first",
+            attacker_pawn_id="attacker",
+            defender_pawn_id="defender",
+            distance_cells=12,
+            hit_chance_percent=100,
+        )
+    )
+    store.save_scenario(
+        SavedScenarioTemplate(
+            id="scenario-b",
+            name="duplicate",
+            attacker_pawn_id="attacker",
+            defender_pawn_id="defender",
+            distance_cells=12,
+            hit_chance_percent=100,
+        )
+    )
+    store.save_scenario(
+        SavedScenarioTemplate(
+            id="scenario-c",
+            name="different",
+            attacker_pawn_id="attacker",
+            defender_pawn_id="defender",
+            distance_cells=25,
+            hit_chance_percent=100,
+        )
+    )
+
+    deleted_count = store.delete_duplicate_scenarios()
+
+    assert deleted_count == 1
+    assert len(store.list_scenarios()) == 2
+
+
 def test_build_analysis_for_saved_scenario_returns_comparison_row() -> None:
     catalog_index = load_catalog_index(Path("tests/fixtures/vanilla_game_data"))
     attacker = SavedPawnTemplate(

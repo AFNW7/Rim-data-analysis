@@ -177,6 +177,7 @@ class RimDataAnalysisDesktopApp(CharacterEditorMixin, ScenarioEditorMixin, tk.Tk
         self.compare_status_var = tk.StringVar(value="从左侧选择一个或多个已保存场景，然后加入右侧对比表。")
         self.compare_filter_var = tk.StringVar()
         self.compare_flow_var = tk.StringVar(value="第 4 步：在这里把已保存场景加入对比表并查看结果。")
+        self.compare_summary_var = tk.StringVar(value="加入场景后，这里会直接给出最高 DPS、最高命中率和护甲衰减最明显的场景。")
 
         self.import_game_data_var = tk.StringVar()
         self.import_workshop_var = tk.StringVar()
@@ -1040,6 +1041,15 @@ class RimDataAnalysisDesktopApp(CharacterEditorMixin, ScenarioEditorMixin, tk.Tk
 
     def _delete_selected_scenario(self) -> None:
         desktop_user_app_pages.delete_selected_scenario(self)
+
+    def _rename_selected_pawn(self) -> None:
+        desktop_user_app_pages.rename_selected_pawn(self)
+
+    def _rename_selected_scenario(self) -> None:
+        desktop_user_app_pages.rename_selected_scenario(self)
+
+    def _cleanup_duplicate_scenarios(self) -> None:
+        desktop_user_app_pages.cleanup_duplicate_scenarios(self)
 
 
 def main() -> int:

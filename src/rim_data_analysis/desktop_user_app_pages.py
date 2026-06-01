@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 import tkinter as tk
 from typing import TYPE_CHECKING
 
@@ -28,7 +28,8 @@ def build_compare_page(app: RimDataAnalysisDesktopApp) -> None:
 
     main = app._panel(page, padx=18, pady=18)
     main.grid(row=0, column=1, sticky="nsew", pady=4)
-    main.grid_rowconfigure(2, weight=1)
+    main.grid_rowconfigure(2, weight=0)
+    main.grid_rowconfigure(3, weight=1)
     main.grid_columnconfigure(0, weight=1)
 
     tk.Label(sidebar, text="场景导入", bg=app.colors["panel"], fg=app.colors["ink"], font=("Bahnschrift", 18, "bold")).pack(anchor="w")
@@ -59,8 +60,14 @@ def build_compare_page(app: RimDataAnalysisDesktopApp) -> None:
     tk.Label(main, text="结果对比表", bg=app.colors["panel"], fg=app.colors["ink"], font=("Bahnschrift", 18, "bold")).grid(row=0, column=0, sticky="w")
     tk.Label(main, text="点击表头即可按该列升序或降序排序。", bg=app.colors["panel"], fg=app.colors["muted"], font=("Microsoft YaHei UI", 10)).grid(row=1, column=0, sticky="w", pady=(4, 14))
 
+    summary_panel = tk.Frame(main, bg=app.colors["panel_alt"], padx=14, pady=12, highlightthickness=1, highlightbackground=app.colors["line"])
+    summary_panel.grid(row=2, column=0, sticky="ew", pady=(0, 12))
+    summary_panel.grid_columnconfigure(0, weight=1)
+    tk.Label(summary_panel, text="对比结论", bg=app.colors["panel_alt"], fg=app.colors["accent"], font=("Bahnschrift", 13, "bold")).grid(row=0, column=0, sticky="w")
+    tk.Label(summary_panel, textvariable=app.compare_summary_var, bg=app.colors["panel_alt"], fg=app.colors["ink"], justify="left", wraplength=980, font=("Microsoft YaHei UI", 10)).grid(row=1, column=0, sticky="ew", pady=(6, 0))
+
     table_shell = tk.Frame(main, bg=app.colors["panel"])
-    table_shell.grid(row=2, column=0, sticky="nsew")
+    table_shell.grid(row=3, column=0, sticky="nsew")
     table_shell.grid_rowconfigure(0, weight=1)
     table_shell.grid_columnconfigure(0, weight=1)
     columns = [
@@ -181,6 +188,7 @@ def build_resources_page(app: RimDataAnalysisDesktopApp) -> None:
     pawn_buttons = tk.Frame(pawns_panel, bg=app.colors["panel"])
     pawn_buttons.grid(row=4, column=0, sticky="ew", pady=(12, 0))
     ttk.Button(pawn_buttons, text="载入到人物创建页", style="Subtle.TButton", command=app._load_selected_character_from_resources).pack(side="left", fill="x", expand=True, padx=(0, 6))
+    ttk.Button(pawn_buttons, text="重命名选中人物", style="Subtle.TButton", command=app._rename_selected_pawn).pack(side="left", fill="x", expand=True, padx=(0, 6))
     ttk.Button(pawn_buttons, text="删除选中人物", style="Subtle.TButton", command=app._delete_selected_pawn).pack(side="left", fill="x", expand=True)
 
     tk.Label(scenarios_panel, text="已保存场景", bg=app.colors["panel"], fg=app.colors["ink"], font=("Bahnschrift", 18, "bold")).grid(row=0, column=0, sticky="w")
@@ -199,7 +207,9 @@ def build_resources_page(app: RimDataAnalysisDesktopApp) -> None:
     scenario_buttons = tk.Frame(scenarios_panel, bg=app.colors["panel"])
     scenario_buttons.grid(row=4, column=0, sticky="ew", pady=(12, 0))
     ttk.Button(scenario_buttons, text="载入到场景设计页", style="Subtle.TButton", command=app._load_selected_scenario_from_resources).pack(side="left", fill="x", expand=True, padx=(0, 6))
+    ttk.Button(scenario_buttons, text="重命名选中场景", style="Subtle.TButton", command=app._rename_selected_scenario).pack(side="left", fill="x", expand=True, padx=(0, 6))
     ttk.Button(scenario_buttons, text="删除选中场景", style="Subtle.TButton", command=app._delete_selected_scenario).pack(side="left", fill="x", expand=True)
+    ttk.Button(scenarios_panel, text="清理重复场景", style="Subtle.TButton", command=app._cleanup_duplicate_scenarios).grid(row=5, column=0, sticky="ew", pady=(8, 0))
 
 
 def auto_detect_paths(app: RimDataAnalysisDesktopApp) -> None:
@@ -487,6 +497,28 @@ def refresh_compare_table(app: RimDataAnalysisDesktopApp) -> None:
             else:
                 values.append(raw)
         app.compare_tree.insert("", tk.END, values=values)
+    update_compare_summary(app)
+
+
+def update_compare_summary(app: RimDataAnalysisDesktopApp) -> None:
+    if not app.compare_rows:
+        app.compare_summary_var.set("加入场景后，这里会直接给出最高 DPS、最高命中率和护甲衰减最明显的场景。")
+        return
+    best_dps = max(app.compare_rows, key=lambda row: row.expected_dps)
+    best_hit = max(app.compare_rows, key=lambda row: row.hit_chance_percent)
+    best_armor = max(app.compare_rows, key=lambda row: row.armor_reduction_percent)
+    best_survival = min(app.compare_rows, key=lambda row: row.damage_taken_multiplier)
+    app.compare_summary_var.set(
+        "\n".join(
+            [
+                f"已加入 {len(app.compare_rows)} 个场景。",
+                f"最高输出：{best_dps.scenario_name}，期望 DPS {best_dps.expected_dps:.4f}。",
+                f"最高命中：{best_hit.scenario_name}，最终命中率 {best_hit.hit_chance_percent:.2f}%。",
+                f"护甲衰减最明显：{best_armor.scenario_name}，护甲减伤 {best_armor.armor_reduction_percent:.2f}%。",
+                f"承伤最低：{best_survival.scenario_name}，承伤倍率 {best_survival.damage_taken_multiplier:.4f}。",
+            ]
+        )
+    )
 
 
 def update_resource_pawn_preview(app: RimDataAnalysisDesktopApp) -> None:
@@ -553,3 +585,46 @@ def delete_selected_scenario(app: RimDataAnalysisDesktopApp) -> None:
         app.store.delete_scenario(scenario.id)
     app._refresh_saved_data()
     app.status_var.set(f"已删除 {len(scenarios)} 个场景。")
+
+
+def rename_selected_pawn(app: RimDataAnalysisDesktopApp) -> None:
+    pawn = app._require_single_saved_pawn(app.resource_pawns_listbox, action_label="重命名选中人物")
+    if pawn is None:
+        return
+    new_name = simpledialog.askstring("重命名人物", "请输入新的人物名称：", initialvalue=pawn.name)
+    if new_name is None:
+        return
+    new_name = new_name.strip()
+    if not new_name:
+        messagebox.showerror("名称为空", "人物名称不能为空。")
+        return
+    app.store.rename_pawn(pawn.id, new_name)
+    app._refresh_saved_data()
+    app.status_var.set(f"人物已重命名为“{new_name}”。")
+
+
+def rename_selected_scenario(app: RimDataAnalysisDesktopApp) -> None:
+    scenario = app._require_single_saved_scenario(app.resource_scenarios_listbox, action_label="重命名选中场景")
+    if scenario is None:
+        return
+    new_name = simpledialog.askstring("重命名场景", "请输入新的场景名称：", initialvalue=scenario.name)
+    if new_name is None:
+        return
+    new_name = new_name.strip()
+    if not new_name:
+        messagebox.showerror("名称为空", "场景名称不能为空。")
+        return
+    app.store.rename_scenario(scenario.id, new_name)
+    app._refresh_saved_data()
+    app.status_var.set(f"场景已重命名为“{new_name}”。")
+
+
+def cleanup_duplicate_scenarios(app: RimDataAnalysisDesktopApp) -> None:
+    deleted_count = app.store.delete_duplicate_scenarios()
+    app._refresh_saved_data()
+    if deleted_count:
+        app.status_var.set(f"已清理 {deleted_count} 个重复场景。")
+        messagebox.showinfo("清理完成", f"已清理 {deleted_count} 个重复场景。")
+    else:
+        app.status_var.set("没有发现重复场景。")
+        messagebox.showinfo("没有重复场景", "当前没有发现相同攻防组合、距离和命中率的重复场景。")
