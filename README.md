@@ -28,6 +28,13 @@ v1.0 只支持原版游戏数据分析，暂不支持 Steam 创意工坊 Mod 或
 
 ## 安装
 
+如果你下载的是 Windows 发布压缩包：
+
+1. 解压 `RimDataAnalysis-v1.0.0-windows.zip`。
+2. 双击 `RimDataAnalysis.exe`。
+
+如果你下载的是源码，再按下面方式安装。
+
 在项目根目录执行：
 
 ```powershell
@@ -45,7 +52,7 @@ python -m pip install -e .[dev]
 
 ## 启动
 
-当前推荐的桌面启动方式：
+源码安装后的桌面启动方式：
 
 ```powershell
 rim-analysis app

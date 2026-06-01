@@ -5,6 +5,7 @@
 build/
 dist/
 *.egg-info/
+*.spec
 artifacts/
 __pycache__/
 *.pyc
