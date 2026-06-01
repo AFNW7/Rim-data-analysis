@@ -42,12 +42,14 @@ class ScenarioEditorMixin:
         self.scenario_name_entry.pack(fill="x", pady=(0, 4))
         tk.Label(sidebar, textvariable=self.scenario_name_hint_var, bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=300, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(0, 12))
         self._sidebar_button(sidebar, title="攻击方人物", summary_var=self.scenario_attacker_status_var, command=lambda: self._set_scenario_picker_mode("attacker"))
-        self.scenario_attacker_listbox = self._simple_listbox(sidebar, height=5)
+        self.scenario_attacker_listbox = self._simple_listbox(sidebar, height=5, selectmode=tk.MULTIPLE)
         self.scenario_attacker_listbox.pack(fill="x", pady=(6, 0))
+        self._bind_toggle_multiselect(self.scenario_attacker_listbox)
         ttk.Button(sidebar, text="删除选中攻击方", style="Subtle.TButton", command=self._remove_selected_scenario_attacker).pack(fill="x", pady=(6, 12))
         self._sidebar_button(sidebar, title="防守方人物", summary_var=self.scenario_defender_status_var, command=lambda: self._set_scenario_picker_mode("defender"))
-        self.scenario_defender_listbox = self._simple_listbox(sidebar, height=5)
+        self.scenario_defender_listbox = self._simple_listbox(sidebar, height=5, selectmode=tk.MULTIPLE)
         self.scenario_defender_listbox.pack(fill="x", pady=(6, 0))
+        self._bind_toggle_multiselect(self.scenario_defender_listbox)
         ttk.Button(sidebar, text="删除选中防守方", style="Subtle.TButton", command=self._remove_selected_scenario_defender).pack(fill="x", pady=(6, 12))
         self._labeled_entry(sidebar, "双方距离", self.scenario_distance_var)
         self._labeled_entry(sidebar, "最终命中率%", self.scenario_hit_chance_var)
@@ -102,10 +104,13 @@ class ScenarioEditorMixin:
         )
         search_entry.grid(row=0, column=2, sticky="ew")
 
-        self.scenario_picker_listbox = self._simple_listbox(picker_shell, height=12)
+        self.scenario_picker_listbox = self._simple_listbox(picker_shell, height=12, selectmode=tk.MULTIPLE)
         self.scenario_picker_listbox.grid(row=1, column=0, sticky="nsew")
-        self.scenario_picker_listbox.bind("<<ListboxSelect>>", self._update_scenario_picker_preview)
-        self.scenario_picker_listbox.bind("<Double-Button-1>", lambda _event: self._add_selected_pawn_to_scenario())
+        self._bind_toggle_multiselect(
+            self.scenario_picker_listbox,
+            select_callback=self._update_scenario_picker_preview,
+            double_click_callback=self._add_scenario_picker_pawn_from_index,
+        )
 
         picker_side = tk.Frame(picker_shell, bg=self.colors["panel"], width=320)
         picker_side.grid(row=1, column=1, sticky="ns", padx=(14, 0))
@@ -114,7 +119,7 @@ class ScenarioEditorMixin:
         preview.pack(fill="both", expand=True)
         tk.Label(preview, text="人物预览", bg=self.colors["panel_alt"], fg=self.colors["accent"], font=("Bahnschrift", 14, "bold")).pack(anchor="w")
         tk.Label(preview, textvariable=self.scenario_picker_preview_var, bg=self.colors["panel_alt"], fg=self.colors["ink"], justify="left", wraplength=260, font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(8, 0))
-        self.scenario_picker_apply_button = ttk.Button(picker_side, text="加入攻击方", style="Primary.TButton", command=self._add_selected_pawn_to_scenario)
+        self.scenario_picker_apply_button = ttk.Button(picker_side, text="加入选中攻击方", style="Primary.TButton", command=self._add_selected_pawn_to_scenario)
         self.scenario_picker_apply_button.pack(fill="x", pady=(12, 0))
 
         cards = tk.Frame(main, bg=self.colors["panel"])
@@ -211,10 +216,10 @@ class ScenarioEditorMixin:
         self.scenario_picker_mode = mode
         if mode == "attacker":
             self.scenario_picker_mode_var.set("当前添加到：攻击方")
-            self.scenario_picker_apply_button.configure(text="加入攻击方")
+            self.scenario_picker_apply_button.configure(text="加入选中攻击方")
         else:
             self.scenario_picker_mode_var.set("当前添加到：防守方")
-            self.scenario_picker_apply_button.configure(text="加入防守方")
+            self.scenario_picker_apply_button.configure(text="加入选中防守方")
 
     def _refresh_scenario_picker_list(self) -> None:
         if not hasattr(self, "scenario_picker_listbox"):
@@ -248,36 +253,55 @@ class ScenarioEditorMixin:
             return None
         return self._pawn_by_id(pawn_ids[index])
 
-    def _add_selected_pawn_to_scenario(self) -> None:
-        pawn = self._selected_saved_pawn_from_listbox(self.scenario_picker_listbox)
-        if pawn is None:
-            messagebox.showerror("没有选择人物", "请先在人物列表中选中一个人物。")
+    def _add_pawns_to_scenario_target(self, pawns: list[SavedPawnTemplate]) -> None:
+        if not pawns:
+            messagebox.showerror("没有选择人物", "请先在人物列表中选中一个或多个人物。")
             return
         target_ids = self.scenario_attacker_ids if self.scenario_picker_mode == "attacker" else self.scenario_defender_ids
-        if pawn.id in target_ids:
-            self.scenario_status_var.set(f"{pawn.name} 已经在当前列表中，无需重复加入。")
-            return
-        target_ids.append(pawn.id)
+        target_label = "攻击方" if self.scenario_picker_mode == "attacker" else "防守方"
+        added_names: list[str] = []
+        skipped_names: list[str] = []
+        for pawn in pawns:
+            if pawn.id in target_ids:
+                skipped_names.append(pawn.name)
+                continue
+            target_ids.append(pawn.id)
+            added_names.append(pawn.name)
         self._refresh_scenario_selection_lists()
-        self.scenario_status_var.set(f"已将 {pawn.name} 加入{ '攻击方' if self.scenario_picker_mode == 'attacker' else '防守方' }。")
+        if added_names:
+            self.scenario_status_var.set(f"已将 {len(added_names)} 个人物加入{target_label}。")
+        elif skipped_names:
+            self.scenario_status_var.set(f"选中人物已经在{target_label}列表中，无需重复加入。")
         self._schedule_scenario_analysis()
 
-    def _remove_selected_scenario_attacker(self) -> None:
-        pawn = self._selected_scenario_editor_pawn(self.scenario_attacker_listbox, self.scenario_attacker_ids)
+    def _add_scenario_picker_pawn_from_index(self, index: int) -> None:
+        display = self.scenario_picker_listbox.get(index)
+        pawn = next((item for item in self.saved_pawns if self._pawn_display(item) == display), None)
         if pawn is None:
             return
-        self.scenario_attacker_ids = [pawn_id for pawn_id in self.scenario_attacker_ids if pawn_id != pawn.id]
+        self._add_pawns_to_scenario_target([pawn])
+
+    def _add_selected_pawn_to_scenario(self) -> None:
+        self._add_pawns_to_scenario_target(self._selected_saved_pawns_from_listbox(self.scenario_picker_listbox))
+
+    def _remove_selected_scenario_attacker(self) -> None:
+        indices = self._selected_indices(self.scenario_attacker_listbox)
+        if not indices:
+            return
+        remove_ids = {self.scenario_attacker_ids[index] for index in indices if index < len(self.scenario_attacker_ids)}
+        self.scenario_attacker_ids = [pawn_id for pawn_id in self.scenario_attacker_ids if pawn_id not in remove_ids]
         self._refresh_scenario_selection_lists()
-        self.scenario_status_var.set(f"已从攻击方移除 {pawn.name}。")
+        self.scenario_status_var.set(f"已从攻击方移除 {len(remove_ids)} 个人物。")
         self._schedule_scenario_analysis()
 
     def _remove_selected_scenario_defender(self) -> None:
-        pawn = self._selected_scenario_editor_pawn(self.scenario_defender_listbox, self.scenario_defender_ids)
-        if pawn is None:
+        indices = self._selected_indices(self.scenario_defender_listbox)
+        if not indices:
             return
-        self.scenario_defender_ids = [pawn_id for pawn_id in self.scenario_defender_ids if pawn_id != pawn.id]
+        remove_ids = {self.scenario_defender_ids[index] for index in indices if index < len(self.scenario_defender_ids)}
+        self.scenario_defender_ids = [pawn_id for pawn_id in self.scenario_defender_ids if pawn_id not in remove_ids]
         self._refresh_scenario_selection_lists()
-        self.scenario_status_var.set(f"已从防守方移除 {pawn.name}。")
+        self.scenario_status_var.set(f"已从防守方移除 {len(remove_ids)} 个人物。")
         self._schedule_scenario_analysis()
 
     def _load_scenario_into_editor(self, scenario: SavedScenarioTemplate) -> None:
