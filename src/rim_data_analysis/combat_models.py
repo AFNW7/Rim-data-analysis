@@ -7,10 +7,19 @@ from dataclasses import asdict, dataclass, field
 class CombatStatModifier:
     name: str
     shooting_skill_offset: float = 0.0
+    shooting_accuracy_stat_offset: float = 0.0
     shooting_accuracy_per_tile_offset: float = 0.0
     shooting_accuracy_multiplier: float = 1.0
+    aiming_time_stat_offset: float = 0.0
     aiming_time_multiplier: float = 1.0
+    ranged_cooldown_stat_offset: float = 0.0
     ranged_cooldown_multiplier: float = 1.0
+    sight_offset: float = 0.0
+    sight_multiplier: float = 1.0
+    manipulation_offset: float = 0.0
+    manipulation_multiplier: float = 1.0
+    moving_offset: float = 0.0
+    moving_multiplier: float = 1.0
     melee_hit_score_offset: float = 0.0
     melee_hit_chance_offset: float = 0.0
     melee_hit_chance_multiplier: float = 1.0
@@ -83,6 +92,20 @@ class PawnCombatProfile:
 
 
 @dataclass(slots=True)
+class MeleeAttackOption:
+    label: str
+    damage_type: str
+    damage: float
+    armor_penetration: float
+    cooldown_seconds: float
+    chance_factor: float = 1.0
+    capacities: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
 class WeaponProfile:
     name: str
     attack_mode: str
@@ -97,6 +120,7 @@ class WeaponProfile:
     accuracy_short: float = 1.0
     accuracy_medium: float = 1.0
     accuracy_long: float = 1.0
+    melee_attack_options: list[MeleeAttackOption] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -109,6 +133,9 @@ class AttackContext:
     target_is_aiming_or_firing: bool = False
     hit_chance_multiplier: float = 1.0
     cover_block_chance: float = 0.0
+    weather_accuracy_multiplier: float = 1.0
+    smoke_accuracy_multiplier: float = 1.0
+    combat_in_darkness_accuracy_offset: float = 0.0
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -189,6 +216,12 @@ class AccuracyResult:
     final_hit_chance: float
     accuracy_band: str | None
     attacker_shooting_accuracy_per_tile: float | None
+    weapon_accuracy_at_distance: float | None
+    target_size_factor: float | None
+    weather_accuracy_multiplier: float | None
+    smoke_accuracy_multiplier: float | None
+    combat_in_darkness_accuracy_offset: float | None
+    hit_chance_multiplier: float | None
     attacker_melee_hit_chance: float | None
     defender_melee_dodge_chance: float | None
 

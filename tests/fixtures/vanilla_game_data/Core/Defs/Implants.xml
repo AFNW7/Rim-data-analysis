@@ -1,0 +1,35 @@
+<Defs>
+  <HediffDef ParentName="AddedBodyPartBase">
+    <defName>Implant_BionicEye</defName>
+    <label>bionic eye</label>
+    <spawnThingOnRemoved>BionicEyeItem</spawnThingOnRemoved>
+    <addedPartProps>
+      <partEfficiency>1.25</partEfficiency>
+    </addedPartProps>
+  </HediffDef>
+
+  <HediffDef ParentName="AddedBodyPartBase">
+    <defName>Implant_ArchotechEye</defName>
+    <label>archotech eye</label>
+    <spawnThingOnRemoved>ArchotechEyeItem</spawnThingOnRemoved>
+    <addedPartProps>
+      <partEfficiency>1.50</partEfficiency>
+    </addedPartProps>
+    <stages>
+      <li>
+        <statFactors>
+          <ShootingAccuracyPawn>1.04</ShootingAccuracyPawn>
+        </statFactors>
+      </li>
+    </stages>
+  </HediffDef>
+
+  <HediffDef ParentName="AddedBodyPartBase">
+    <defName>Implant_BionicArm</defName>
+    <label>bionic arm</label>
+    <spawnThingOnRemoved>BionicArmItem</spawnThingOnRemoved>
+    <addedPartProps>
+      <partEfficiency>1.20</partEfficiency>
+    </addedPartProps>
+  </HediffDef>
+</Defs>

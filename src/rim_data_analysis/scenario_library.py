@@ -71,9 +71,12 @@ _CAPACITY_FIELDS = {"sight", "manipulation", "moving"}
 _MODIFIER_FIELDS = {
     "name",
     "shooting_skill_offset",
+    "shooting_accuracy_stat_offset",
     "shooting_accuracy_per_tile_offset",
     "shooting_accuracy_multiplier",
+    "aiming_time_stat_offset",
     "aiming_time_multiplier",
+    "ranged_cooldown_stat_offset",
     "ranged_cooldown_multiplier",
     "melee_hit_score_offset",
     "melee_hit_chance_offset",
@@ -109,6 +112,16 @@ _WEAPON_FIELDS = {
     "accuracy_short",
     "accuracy_medium",
     "accuracy_long",
+    "melee_attack_options",
+}
+_MELEE_ATTACK_FIELDS = {
+    "label",
+    "damage_type",
+    "damage",
+    "armor_penetration",
+    "cooldown_seconds",
+    "chance_factor",
+    "capacities",
 }
 _CONTEXT_FIELDS = {
     "distance_cells",
@@ -116,6 +129,9 @@ _CONTEXT_FIELDS = {
     "target_is_aiming_or_firing",
     "hit_chance_multiplier",
     "cover_block_chance",
+    "weather_accuracy_multiplier",
+    "smoke_accuracy_multiplier",
+    "combat_in_darkness_accuracy_offset",
 }
 
 
@@ -284,6 +300,24 @@ def _validate_manual_weapon(value: object, path: str) -> None:
     )
     if "burst_shot_count" in weapon and weapon["burst_shot_count"] is not None:
         _ensure_int(weapon["burst_shot_count"], f"{path}.burst_shot_count")
+    if "melee_attack_options" in weapon and weapon["melee_attack_options"] is not None:
+        options = _ensure_list(weapon["melee_attack_options"], f"{path}.melee_attack_options")
+        for index, option in enumerate(options):
+            option_path = f"{path}.melee_attack_options[{index}]"
+            option_payload = _ensure_object(option, option_path)
+            _ensure_known_fields(option_payload, _MELEE_ATTACK_FIELDS, option_path)
+            for required_field in ("label", "damage_type", "damage", "armor_penetration", "cooldown_seconds"):
+                if required_field not in option_payload or option_payload[required_field] is None:
+                    _raise_validation_error(option_path, f"requires '{required_field}'.")
+            _ensure_string(option_payload["label"], f"{option_path}.label")
+            _ensure_string(option_payload["damage_type"], f"{option_path}.damage_type")
+            _validate_numeric_fields(
+                option_payload,
+                option_path,
+                {"damage", "armor_penetration", "cooldown_seconds", "chance_factor"},
+            )
+            if "capacities" in option_payload and option_payload["capacities"] is not None:
+                _validate_string_list(option_payload["capacities"], f"{option_path}.capacities")
 
 
 def _validate_context(value: object, path: str) -> None:
@@ -295,7 +329,17 @@ def _validate_context(value: object, path: str) -> None:
         _ensure_string(context["target_body_region"], f"{path}.target_body_region")
     if "target_is_aiming_or_firing" in context and context["target_is_aiming_or_firing"] is not None:
         _ensure_bool(context["target_is_aiming_or_firing"], f"{path}.target_is_aiming_or_firing")
-    _validate_numeric_fields(context, path, {"hit_chance_multiplier", "cover_block_chance"})
+    _validate_numeric_fields(
+        context,
+        path,
+        {
+            "hit_chance_multiplier",
+            "cover_block_chance",
+            "weather_accuracy_multiplier",
+            "smoke_accuracy_multiplier",
+            "combat_in_darkness_accuracy_offset",
+        },
+    )
 
 
 def _validate_template_payload(

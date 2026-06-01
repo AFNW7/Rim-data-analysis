@@ -2,6 +2,7 @@
   <ThingDef ParentName="ApparelBase">
     <defName>Apparel_TestVest</defName>
     <label>test vest</label>
+    <MadeFromStuff>true</MadeFromStuff>
     <apparel>
       <layers>
         <li>Middle</li>
@@ -35,6 +36,11 @@
       <ArmorRating_Blunt>0.08</ArmorRating_Blunt>
       <ArmorRating_Heat>0.2</ArmorRating_Heat>
     </statBases>
+    <statFactors>
+      <ShootingAccuracyPawn>1.06</ShootingAccuracyPawn>
+      <AimingDelayFactor>0.92</AimingDelayFactor>
+      <RangedWeapon_Cooldown>0.95</RangedWeapon_Cooldown>
+      <Sight>1.08</Sight>
+    </statFactors>
   </ThingDef>
 </Defs>
-

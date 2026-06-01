@@ -1,0 +1,12 @@
+<Defs>
+  <DamageDef>
+    <defName>Sharp</defName>
+    <armorCategory>Sharp</armorCategory>
+    <defaultArmorPenetration>0.05</defaultArmorPenetration>
+  </DamageDef>
+
+  <DamageDef Name="Bullet">
+    <defName>Bullet</defName>
+    <armorCategory>Sharp</armorCategory>
+  </DamageDef>
+</Defs>

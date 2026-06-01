@@ -8,6 +8,7 @@ from rim_data_analysis.combat_models import (
     AttackContext,
     CombatScenario,
     CombatStatModifier,
+    MeleeAttackOption,
     PawnCapacities,
     PawnCombatProfile,
     WeaponProfile,
@@ -18,10 +19,19 @@ def _modifier_from_dict(data: dict[str, object]) -> CombatStatModifier:
     return CombatStatModifier(
         name=str(data.get("name", "custom_modifier")),
         shooting_skill_offset=float(data.get("shooting_skill_offset", 0.0)),
+        shooting_accuracy_stat_offset=float(data.get("shooting_accuracy_stat_offset", 0.0)),
         shooting_accuracy_per_tile_offset=float(data.get("shooting_accuracy_per_tile_offset", 0.0)),
         shooting_accuracy_multiplier=float(data.get("shooting_accuracy_multiplier", 1.0)),
+        aiming_time_stat_offset=float(data.get("aiming_time_stat_offset", 0.0)),
         aiming_time_multiplier=float(data.get("aiming_time_multiplier", 1.0)),
+        ranged_cooldown_stat_offset=float(data.get("ranged_cooldown_stat_offset", 0.0)),
         ranged_cooldown_multiplier=float(data.get("ranged_cooldown_multiplier", 1.0)),
+        sight_offset=float(data.get("sight_offset", 0.0)),
+        sight_multiplier=float(data.get("sight_multiplier", 1.0)),
+        manipulation_offset=float(data.get("manipulation_offset", 0.0)),
+        manipulation_multiplier=float(data.get("manipulation_multiplier", 1.0)),
+        moving_offset=float(data.get("moving_offset", 0.0)),
+        moving_multiplier=float(data.get("moving_multiplier", 1.0)),
         melee_hit_score_offset=float(data.get("melee_hit_score_offset", 0.0)),
         melee_hit_chance_offset=float(data.get("melee_hit_chance_offset", 0.0)),
         melee_hit_chance_multiplier=float(data.get("melee_hit_chance_multiplier", 1.0)),
@@ -97,6 +107,19 @@ def _pawn_from_dict(data: dict[str, object]) -> PawnCombatProfile:
 
 
 def _weapon_from_dict(data: dict[str, object]) -> WeaponProfile:
+    melee_attack_options = [
+        MeleeAttackOption(
+            label=str(item.get("label", "attack")),
+            damage_type=str(item.get("damage_type", data.get("damage_type", "Sharp"))),
+            damage=float(item.get("damage", 0.0)),
+            armor_penetration=float(item.get("armor_penetration", 0.0)),
+            cooldown_seconds=float(item.get("cooldown_seconds", data.get("cooldown_seconds", 0.0))),
+            chance_factor=float(item.get("chance_factor", 1.0)),
+            capacities=[str(capacity) for capacity in item.get("capacities", [])],
+        )
+        for item in data.get("melee_attack_options", [])
+        if isinstance(item, dict)
+    ]
     return WeaponProfile(
         name=str(data["name"]),
         attack_mode=str(data["attack_mode"]),
@@ -111,6 +134,7 @@ def _weapon_from_dict(data: dict[str, object]) -> WeaponProfile:
         accuracy_short=float(data.get("accuracy_short", 1.0)),
         accuracy_medium=float(data.get("accuracy_medium", 1.0)),
         accuracy_long=float(data.get("accuracy_long", 1.0)),
+        melee_attack_options=melee_attack_options,
     )
 
 
@@ -122,6 +146,9 @@ def _context_from_dict(data: dict[str, object] | None) -> AttackContext:
         target_is_aiming_or_firing=bool(payload.get("target_is_aiming_or_firing", False)),
         hit_chance_multiplier=float(payload.get("hit_chance_multiplier", 1.0)),
         cover_block_chance=float(payload.get("cover_block_chance", 0.0)),
+        weather_accuracy_multiplier=float(payload.get("weather_accuracy_multiplier", 1.0)),
+        smoke_accuracy_multiplier=float(payload.get("smoke_accuracy_multiplier", 1.0)),
+        combat_in_darkness_accuracy_offset=float(payload.get("combat_in_darkness_accuracy_offset", 0.0)),
     )
 
 

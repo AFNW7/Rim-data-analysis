@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
-from rim_data_analysis.combat_models import ApparelProfile, WeaponProfile
+from rim_data_analysis.combat_models import ApparelProfile, CombatStatModifier, MeleeAttackOption, WeaponProfile
 
 
 @dataclass(slots=True)
@@ -26,14 +26,21 @@ class VanillaWeaponRecord:
     projectile_def: str | None = None
     primary_tool_label: str | None = None
     primary_tool_capacities: list[str] = field(default_factory=list)
+    melee_attack_options: list[MeleeAttackOption] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
+    supports_material: bool = False
+    source_tag: str = "vanilla"
+
+    @property
+    def display_label(self) -> str:
+        return f"{self.label}/{self.source_tag}" if self.source_tag else self.label
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
 
     def to_weapon_profile(self) -> WeaponProfile:
         return WeaponProfile(
-            name=self.label,
+            name=self.display_label,
             attack_mode=self.attack_mode,
             damage_type=self.damage_type,
             damage=self.damage,
@@ -46,6 +53,7 @@ class VanillaWeaponRecord:
             accuracy_short=self.accuracy_short,
             accuracy_medium=self.accuracy_medium,
             accuracy_long=self.accuracy_long,
+            melee_attack_options=[MeleeAttackOption(**option.to_dict()) for option in self.melee_attack_options],
         )
 
 
@@ -60,13 +68,23 @@ class VanillaApparelRecord:
     armor_sharp: float
     armor_blunt: float
     armor_heat: float
+    stuff_armor_multiplier: float = 0.0
+    modifier: CombatStatModifier | None = None
+    supports_material: bool = False
+    source_tag: str = "vanilla"
+
+    @property
+    def display_label(self) -> str:
+        return f"{self.label}/{self.source_tag}" if self.source_tag else self.label
 
     def to_dict(self) -> dict[str, object]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["modifier"] = self.modifier.to_dict() if self.modifier is not None else None
+        return payload
 
     def to_apparel_profile(self) -> ApparelProfile:
         return ApparelProfile(
-            name=self.label,
+            name=self.display_label,
             source=self.source_package,
             layers=self.layers,
             covers=self.body_part_groups,
@@ -75,6 +93,33 @@ class VanillaApparelRecord:
             armor_heat=self.armor_heat,
         )
 
+    def to_modifier(self) -> CombatStatModifier | None:
+        return self.modifier
+
+
+@dataclass(slots=True)
+class VanillaImplantRecord:
+    def_name: str
+    label: str
+    source_package: str
+    root_path: str
+    body_part_hint: str
+    part_efficiency: float
+    modifier: CombatStatModifier | None = None
+    source_tag: str = "vanilla"
+
+    @property
+    def display_label(self) -> str:
+        return f"{self.label}/{self.source_tag}" if self.source_tag else self.label
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["modifier"] = self.modifier.to_dict() if self.modifier is not None else None
+        return payload
+
+    def to_modifier(self) -> CombatStatModifier | None:
+        return self.modifier
+
 
 @dataclass(slots=True)
 class VanillaCatalog:
@@ -82,6 +127,7 @@ class VanillaCatalog:
     packages: list[str]
     weapons: list[VanillaWeaponRecord]
     apparel: list[VanillaApparelRecord]
+    implants: list[VanillaImplantRecord] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -89,5 +135,5 @@ class VanillaCatalog:
             "packages": self.packages,
             "weapons": [weapon.to_dict() for weapon in self.weapons],
             "apparel": [item.to_dict() for item in self.apparel],
+            "implants": [item.to_dict() for item in self.implants],
         }
-

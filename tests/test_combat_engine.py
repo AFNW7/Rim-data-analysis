@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from rim_data_analysis.combat_engine import (
+    _weapon_accuracy_value,
     analyze_scenario,
     compute_melee_dodge_chance,
     compute_melee_hit_chance,
@@ -11,7 +14,7 @@ from rim_data_analysis.combat_engine import (
     resolve_armor,
 )
 from rim_data_analysis.combat_io import load_scenario
-from rim_data_analysis.combat_models import ApparelProfile, PawnCombatProfile, WeaponProfile
+from rim_data_analysis.combat_models import ApparelProfile, AttackContext, CombatScenario, MeleeAttackOption, PawnCombatProfile, WeaponProfile
 
 
 def test_careful_shooter_uses_expected_accuracy_curve() -> None:
@@ -19,7 +22,7 @@ def test_careful_shooter_uses_expected_accuracy_curve() -> None:
 
     accuracy = compute_shooting_accuracy_per_tile(pawn)
 
-    assert accuracy == 0.985
+    assert accuracy == pytest.approx(0.984995)
 
 
 def test_melee_curves_match_known_baselines() -> None:
@@ -93,3 +96,79 @@ def test_analyze_scenario_generates_positive_expected_dps() -> None:
     assert result.accuracy.final_hit_chance > 0
     assert result.damage.expected_dps > 0
     assert result.armor.layers[0].apparel_name == "devilstrand-duster-like"
+
+
+def test_weapon_accuracy_uses_anchor_points_and_linear_interpolation() -> None:
+    weapon = WeaponProfile(
+        name="test-rifle",
+        attack_mode="ranged",
+        damage_type="Sharp",
+        damage=10,
+        armor_penetration=18,
+        accuracy_close=0.95,
+        accuracy_short=0.87,
+        accuracy_medium=0.77,
+        accuracy_long=0.60,
+    )
+
+    assert _weapon_accuracy_value(weapon, 3)[1] == 0.95
+    assert _weapon_accuracy_value(weapon, 12)[1] == 0.87
+    assert _weapon_accuracy_value(weapon, 25)[1] == 0.77
+    assert _weapon_accuracy_value(weapon, 40)[1] == 0.60
+    assert _weapon_accuracy_value(weapon, 14)[1] == 0.87 + (0.77 - 0.87) * (2 / 13)
+
+
+def test_melee_multi_tool_weapon_uses_weighted_attack_selection() -> None:
+    attacker = PawnCombatProfile(
+        name="melee-attacker",
+        melee_hit_chance_override=1.0,
+    )
+    defender = PawnCombatProfile(
+        name="melee-defender",
+        melee_dodge_chance_override=0.0,
+    )
+    weapon = WeaponProfile(
+        name="test-longsword",
+        attack_mode="melee",
+        damage_type="Sharp",
+        damage=23,
+        armor_penetration=34.5,
+        cooldown_seconds=2.6,
+        melee_attack_options=[
+            MeleeAttackOption(
+                label="handle",
+                damage_type="Blunt",
+                damage=9,
+                armor_penetration=13.5,
+                cooldown_seconds=2.0,
+            ),
+            MeleeAttackOption(
+                label="point",
+                damage_type="Sharp",
+                damage=23,
+                armor_penetration=34.5,
+                cooldown_seconds=2.6,
+            ),
+            MeleeAttackOption(
+                label="edge",
+                damage_type="Sharp",
+                damage=23,
+                armor_penetration=34.5,
+                cooldown_seconds=2.6,
+            ),
+        ],
+    )
+    scenario = CombatScenario(
+        name="weighted-melee",
+        attacker=attacker,
+        defender=defender,
+        weapon=weapon,
+        context=AttackContext(target_body_region="Torso"),
+    )
+
+    result = analyze_scenario(scenario)
+
+    assert result.accuracy.final_hit_chance == 1.0
+    assert result.damage.raw_damage_on_hit == pytest.approx(22.125)
+    assert result.damage.expected_damage_on_hit_after_defense == pytest.approx(22.125)
+    assert result.damage.theoretical_dps == pytest.approx(22.125 / 2.5625)
