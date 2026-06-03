@@ -9,7 +9,9 @@ v1.0 暂不支持 Mod 数据分析。
 一、如何启动
 ------------
 
-解压 RimDataAnalysis-v1.0.0-windows-x64.zip 后，进入解压出来的文件夹，双击：
+从 GitHub Release 下载 RimDataAnalysis-v1.0.0-windows-x64.zip。
+
+解压后进入解压出来的文件夹，双击：
 
 RimDataAnalysis.exe
 

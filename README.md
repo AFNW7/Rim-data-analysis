@@ -26,6 +26,20 @@ v1.0 当前只支持原版游戏数据分析，暂不支持 Steam 创意工坊 M
 - 发布包暂未做代码签名，首次运行时 Windows 可能提示安全风险。
 - 计算模型以原版规则为目标，但仍属于游戏外分析工具，不是逐 tick 战斗模拟器。
 
+## 下载发布包
+
+普通用户建议从 GitHub Releases 页面下载：
+
+```text
+RimDataAnalysis-v1.0.0-windows-x64.zip
+```
+
+发布压缩包属于构建产物，不随源码仓库提交。开发者本地构建后，压缩包会生成在：
+
+```text
+desktop\app\release\RimDataAnalysis-v1.0.0-windows-x64.zip
+```
+
 ## 普通用户使用
 
 如果你下载的是 Windows 发布压缩包：

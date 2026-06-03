@@ -2,6 +2,20 @@
 
 这是第一个以 Electron 桌面端作为正式用户界面的 v1.0 版本。
 
+## GitHub Release 描述
+
+这是 Rim Data Analysis 的 v1.0 Windows 桌面版本。普通用户下载 `RimDataAnalysis-v1.0.0-windows-x64.zip`，解压后双击 `RimDataAnalysis.exe` 即可使用；发布包已内置 Electron 桌面界面和 Python 本地计算后端，不需要额外安装 Python 或 Node.js。
+
+当前版本面向《RimWorld》原版数据分析，支持人物创建、场景设计、结果对比、数据导入和资源管理。v1.0 暂不支持 Steam 创意工坊 Mod 数据分析，也不是逐 tick 战斗模拟器。
+
+发布附件：
+
+```text
+desktop\app\release\RimDataAnalysis-v1.0.0-windows-x64.zip
+```
+
+该压缩包体积超过 100MB，不应提交进 Git 源码仓库；发布时应作为 GitHub Release 附件上传。
+
 ## 发布内容
 
 - Windows x64 桌面应用压缩包：`RimDataAnalysis-v1.0.0-windows-x64.zip`
