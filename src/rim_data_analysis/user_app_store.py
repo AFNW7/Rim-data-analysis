@@ -115,12 +115,31 @@ class UserAppStore:
 
     def list_pawns(self) -> list[SavedPawnTemplate]:
         return sorted(
-            [SavedPawnTemplate.from_dict(_read_json(path)) for path in self.pawns_dir.glob("*.json")],
+            [
+                SavedPawnTemplate.from_dict(_read_json(path))
+                for path in self.pawns_dir.glob("*.json")
+            ],
             key=lambda item: item.name.lower(),
         )
 
     def load_pawn(self, template_id: str) -> SavedPawnTemplate:
         return SavedPawnTemplate.from_dict(_read_json(self._pawn_path(template_id)))
+
+    def find_pawn_by_name(
+        self,
+        name: str,
+        *,
+        exclude_id: str | None = None,
+    ) -> SavedPawnTemplate | None:
+        normalized_name = name.strip().casefold()
+        if not normalized_name:
+            return None
+        for item in self.list_pawns():
+            if exclude_id is not None and item.id == exclude_id:
+                continue
+            if item.name.strip().casefold() == normalized_name:
+                return item
+        return None
 
     def save_pawn(self, pawn: SavedPawnTemplate) -> SavedPawnTemplate:
         normalized = SavedPawnTemplate(
@@ -140,7 +159,11 @@ class UserAppStore:
         return normalized
 
     def delete_pawn(self, template_id: str) -> None:
-        dependencies = [item for item in self.list_scenarios() if template_id in {item.attacker_pawn_id, item.defender_pawn_id}]
+        dependencies = [
+            item
+            for item in self.list_scenarios()
+            if template_id in {item.attacker_pawn_id, item.defender_pawn_id}
+        ]
         if dependencies:
             names = "、".join(item.name for item in dependencies[:3])
             raise ValueError(f"该人物已被场景使用：{names}")
@@ -165,7 +188,10 @@ class UserAppStore:
 
     def list_scenarios(self) -> list[SavedScenarioTemplate]:
         return sorted(
-            [SavedScenarioTemplate.from_dict(_read_json(path)) for path in self.scenarios_dir.glob("*.json")],
+            [
+                SavedScenarioTemplate.from_dict(_read_json(path))
+                for path in self.scenarios_dir.glob("*.json")
+            ],
             key=lambda item: item.name.lower(),
         )
 
@@ -265,7 +291,9 @@ class UserAppStore:
             "saved_at": datetime.now().isoformat(timespec="seconds"),
             "rows": [row.to_dict() for row in rows],
         }
-        output_path = self.results_dir / f"{_timestamp_slug()}-{_slugify(label)}-{_nonce_slug()}.json"
+        output_path = (
+            self.results_dir / f"{_timestamp_slug()}-{_slugify(label)}-{_nonce_slug()}.json"
+        )
         _write_json(output_path, payload)
         return output_path
 

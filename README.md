@@ -1,81 +1,47 @@
 # Rim Data Analysis
 
-`Rim Data Analysis` 是一个面向《RimWorld》的 v1.0 桌面分析工具，用于在游戏外创建小人模板、设计攻防测试场景，并对比不同武器、装备和护甲条件下的输出与承伤结果。
+`Rim Data Analysis` 是一个面向《RimWorld》原版数据的 v1.0 桌面分析工具，用于在游戏外创建小人模板、设计攻防测试场景，并对比不同武器、装备、植入体和护甲条件下的输出与承伤结果。
 
-v1.0 只支持原版游戏数据分析，暂不支持 Steam 创意工坊 Mod 或其他 Mod 数据分析。
+v1.0 当前只支持原版游戏数据分析，暂不支持 Steam 创意工坊 Mod 或其他 Mod 数据分析。
 
 ## 适用场景
 
-- 不想在游戏内反复刷高品质装备、搭建测试环境、手动记录随机测试结果。
-- 想快速比较不同武器、品质、特性、植入体和防具条件下的输出差异。
-- 想批量生成多个攻击方和防守方组合，并在表格中横向比较。
-- 想把《RimWorld》的复杂攻防数据放到游戏外软件里分析。
+- 不想在游戏内反复刷高品质装备、搭建测试环境、手动记录随机战斗结果。
+- 想快速比较不同武器、品质、特性、特殊装备、植入体和防具条件下的输出差异。
+- 想批量生成多个攻击方和防守方组合，并在表格中横向比较结果。
+- 想把《RimWorld》的复杂攻防数据放到游戏外软件里，用更直观的方式分析。
 
 ## 主要功能
 
 - 人物创建：创建攻击方或防守方模板，配置基础模板、特性、射击等级、武器、衣着、特殊装备和植入体。
-- 场景设计：选择攻击方和防守方，设置双方距离和最终命中率；支持多选后自动生成多组测试场景。
-- 结果对比：以表格方式对比命中率、期望 DPS、理论 DPS、护甲减伤、承伤倍率等指标，并给出简要结论。
+- 场景设计：选择攻击方和防守方，设置双方距离和最终命中率修正，支持多选后自动生成多组测试场景。
+- 结果对比：以表格方式对比命中率、期望 DPS、理论 DPS、护甲减伤、承伤倍率等指标。
 - 数据导入：读取本机《RimWorld》原版 `Data` 目录中的武器、衣着和植入体数据。
-- 资源管理：管理已保存的人物和场景，支持载入、重命名、删除和重复场景清理。
+- 资源管理：管理已保存的人物和场景，支持删除并同步更新其他页面数据。
 
 ## 当前限制
 
 - v1.0 暂不支持 Mod 数据分析。
-- 需要本机安装 Python 3.11 或更高版本。
-- 当前还没有 Windows `.exe` 安装包。
-- 计算模型以原版规则为目标，但仍属于游戏外分析模型，不是逐 tick 战斗模拟器。
+- 当前发布包是 Windows x64 压缩包，不是安装器。
+- 发布包暂未做代码签名，首次运行时 Windows 可能提示安全风险。
+- 计算模型以原版规则为目标，但仍属于游戏外分析工具，不是逐 tick 战斗模拟器。
 
-## 安装
+## 普通用户使用
 
 如果你下载的是 Windows 发布压缩包：
 
-1. 解压 `RimDataAnalysis-v1.0.0-windows.zip`。
-2. 双击 `RimDataAnalysis.exe`。
+1. 解压 `RimDataAnalysis-v1.0.0-windows-x64.zip`。
+2. 进入解压后的文件夹。
+3. 双击 `RimDataAnalysis.exe`。
 
-如果你下载的是源码，再按下面方式安装。
-
-在项目根目录执行：
-
-```powershell
-python -m venv .venv
-Set-ExecutionPolicy -Scope Process Bypass
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e .
-```
-
-如果你要运行测试或参与开发，安装开发依赖：
-
-```powershell
-python -m pip install -e .[dev]
-```
-
-## 启动
-
-源码安装后的桌面启动方式：
-
-```powershell
-rim-analysis app
-```
-
-如果 PowerShell 提示找不到 `rim-analysis`，请确认已经在项目根目录激活虚拟环境：
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-也可以直接运行：
-
-```powershell
-.\.venv\Scripts\rim-analysis.exe app
-```
+发布包已内置桌面界面和本地计算后端，普通用户不需要安装 Python、Node.js，也不需要打开浏览器或访问 `127.0.0.1:8765`。
 
 ## 使用流程
 
-1. 打开“数据导入”页，选择或自动检测《RimWorld》的 `Data` 目录。
+1. 打开“数据导入”页，选择《RimWorld》的 `Data` 目录。
 2. 导入成功后，进入“人物创建”页，保存攻击方和防守方模板。
-3. 进入“场景设计”页，选择攻防人物，设置距离和最终命中率，保存测试场景。
-4. 进入“结果对比”页，把一个或多个场景加入对比表，按列排序查看结果。
+3. 进入“场景设计”页，选择攻防人物，设置距离和最终命中率修正，保存测试场景。
+4. 进入“结果对比”页，把一个或多个场景加入对比表，查看并排序对比结果。
 5. 在“资源管理”页管理已保存的人物和场景。
 
 Windows 上常见的原版数据目录示例：
@@ -102,33 +68,67 @@ $env:RIM_DATA_ANALYSIS_APP_STATE_DIR="E:\Your\Custom\AppState"
 
 旧版本使用的 `artifacts/app-state` 会在首次启动新版应用时自动迁移。
 
-## 开发命令
+## 开发运行
 
-运行测试：
+源码开发需要同时准备 Python 和 Node.js 环境。
+
+在项目根目录执行：
+
+```powershell
+python -m venv .venv
+Set-ExecutionPolicy -Scope Process Bypass
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .[dev]
+
+cd desktop\app
+npm install
+npm start
+```
+
+`npm start` 会构建 Electron 前端并启动桌面窗口，Electron 主进程会自动启动 Python 本地 API。
+
+旧的 `rim-analysis app` Python/Tkinter 桌面入口仍保留用于兼容旧导入路径，但不再作为当前推荐的用户界面。
+
+## 本地构建 Windows 发布包
+
+在项目根目录执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-windows-release.ps1 -Version 1.0.0
+```
+
+构建产物：
+
+```text
+desktop\app\release\RimDataAnalysis-v1.0.0-windows-x64.zip
+```
+
+## 验证命令
+
+运行 Python 测试：
 
 ```powershell
 python -B -m pytest -q
 ```
 
-运行 Ruff 检查：
+运行 Electron 类型检查：
 
 ```powershell
-python -m ruff check .
+cd desktop\app
+npm run typecheck
 ```
 
 ## 项目结构
 
 ```text
+desktop/app/                      # Electron + TypeScript 桌面端
 src/rim_data_analysis/
-  desktop_user_app.py              # 桌面应用入口
-  desktop_user_app_character.py    # 人物创建页
-  desktop_user_app_scenario.py     # 场景设计页
-  desktop_user_app_pages.py        # 结果对比、数据导入、资源管理页
+  web_api.py                       # Electron 调用的本地 JSON API
   combat_engine.py                 # 战斗计算核心
   user_app_*.py                    # 用户应用数据、存储、分析拼装
   vanilla_parser.py                # 原版 XML 数据解析
 tests/                             # 单元测试
-docs/                              # 项目文档
+scripts/build-windows-release.ps1  # Windows 发布包构建脚本
 ```
 
 ## 许可证

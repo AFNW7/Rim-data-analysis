@@ -9,16 +9,18 @@ v1.0 暂不支持 Mod 数据分析。
 一、如何启动
 ------------
 
-解压 RimDataAnalysis-v1.0.0-windows.zip 后，进入解压出来的文件夹，双击：
+解压 RimDataAnalysis-v1.0.0-windows-x64.zip 后，进入解压出来的文件夹，双击：
 
 RimDataAnalysis.exe
+
+普通用户不需要安装 Python、Node.js，也不需要打开浏览器。
 
 
 二、第一次使用
 --------------
 
 1. 打开软件后，先进入“数据导入”页。
-2. 点击自动检测，或手动选择 RimWorld 的 Data 目录。
+2. 手动选择 RimWorld 的 Data 目录。
 3. 常见目录示例：
 
    E:\SteamLibrary\steamapps\common\RimWorld\Data
@@ -31,7 +33,7 @@ RimDataAnalysis.exe
 
 1. 数据导入：导入 RimWorld 原版 Data 目录。
 2. 人物创建：创建攻击方和防守方模板。
-3. 场景设计：选择攻防双方，设置距离和命中率，保存测试场景。
+3. 场景设计：选择攻防双方，设置距离和最终命中率修正，保存测试场景。
 4. 结果对比：把场景加入对比表，查看命中率、DPS、护甲减伤和承伤倍率。
 5. 资源管理：管理已保存的人物和场景。
 
@@ -49,5 +51,5 @@ RimDataAnalysis.exe
 
 1. v1.0 只支持原版游戏数据。
 2. 暂不支持 Steam 创意工坊 Mod 数据分析。
-3. 计算结果是游戏外分析模型，不是逐 tick 战斗模拟器。
-
+3. 当前发布包是未签名压缩包，Windows 可能弹出安全提示。
+4. 计算结果是游戏外分析模型，不是逐 tick 战斗模拟器。

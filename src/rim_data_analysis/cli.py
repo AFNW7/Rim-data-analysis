@@ -23,26 +23,51 @@ def build_parser() -> argparse.ArgumentParser:
     inventory_parser.add_argument("--local-mods-root", type=Path, default=None)
     inventory_parser.add_argument("--workshop-root", type=Path, default=None)
     inventory_parser.add_argument("--save-data-root", type=Path, default=None)
-    inventory_parser.add_argument("--output-dir", type=Path, default=Path("artifacts") / "inventory")
+    inventory_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts") / "inventory",
+    )
 
     scenario_parser = subparsers.add_parser("analyze-scenario", help="run combat scenario analysis")
     scenario_parser.add_argument("--scenario", type=Path, required=True)
     scenario_parser.add_argument("--output", type=Path, default=None)
 
-    vanilla_parser = subparsers.add_parser("analyze-vanilla", help="analyze vanilla weapons and apparel")
+    vanilla_parser = subparsers.add_parser(
+        "analyze-vanilla",
+        help="analyze vanilla weapons and apparel",
+    )
     vanilla_parser.add_argument("--game-data-root", type=Path, default=None)
-    vanilla_parser.add_argument("--output-dir", type=Path, default=Path("artifacts") / "vanilla-analysis")
+    vanilla_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts") / "vanilla-analysis",
+    )
     vanilla_parser.add_argument("--ranged-distance-cells", type=int, default=18)
     vanilla_parser.add_argument("--shooting-skill", type=int, default=12)
     vanilla_parser.add_argument("--melee-skill", type=int, default=12)
 
-    library_parser = subparsers.add_parser("analyze-library", help="analyze a saved scenario library")
+    library_parser = subparsers.add_parser(
+        "analyze-library",
+        help="analyze a saved scenario library",
+    )
     library_parser.add_argument("--library", type=Path, required=True)
     library_parser.add_argument("--game-data-root", type=Path, default=None)
-    library_parser.add_argument("--output-dir", type=Path, default=Path("artifacts") / "scenario-library")
+    library_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts") / "scenario-library",
+    )
     library_parser.add_argument("--tag", action="append", dest="tags", default=[])
     library_parser.add_argument("--scenario-id", action="append", dest="scenario_ids", default=[])
     library_parser.add_argument("--name-contains", type=str, default=None)
+
+    web_api_parser = subparsers.add_parser(
+        "web-api",
+        help="launch local JSON API for the new desktop UI",
+    )
+    web_api_parser.add_argument("--host", type=str, default="127.0.0.1")
+    web_api_parser.add_argument("--port", type=int, default=8765)
 
     subparsers.add_parser("app", help="launch desktop workbench")
 
@@ -98,7 +123,9 @@ def run_analyze_vanilla(args: argparse.Namespace) -> int:
     discovered = discover_paths()
     game_data_root = args.game_data_root or discovered.game_data_root
     if game_data_root is None:
-        raise ValueError("Unable to locate RimWorld game Data root. Pass --game-data-root explicitly.")
+        raise ValueError(
+            "Unable to locate RimWorld game Data root. Pass --game-data-root explicitly."
+        )
 
     catalog = build_vanilla_catalog(game_data_root)
     outputs = write_vanilla_analysis(
@@ -123,7 +150,9 @@ def run_analyze_library(args: argparse.Namespace) -> int:
     discovered = discover_paths()
     game_data_root = args.game_data_root or discovered.game_data_root
     if game_data_root is None:
-        raise ValueError("Unable to locate RimWorld game Data root. Pass --game-data-root explicitly.")
+        raise ValueError(
+            "Unable to locate RimWorld game Data root. Pass --game-data-root explicitly."
+        )
 
     catalog = build_vanilla_catalog(game_data_root)
     library = load_scenario_library(args.library)
@@ -150,6 +179,12 @@ def run_app(_args: argparse.Namespace) -> int:
     return desktop_main()
 
 
+def run_web_api(args: argparse.Namespace) -> int:
+    from rim_data_analysis.web_api import run_web_api as run_server
+
+    return run_server(host=args.host, port=args.port, repo_root=Path.cwd())
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -162,8 +197,14 @@ def main() -> int:
         return run_analyze_vanilla(args)
     if args.command == "analyze-library":
         return run_analyze_library(args)
+    if args.command == "web-api":
+        return run_web_api(args)
     if args.command == "app":
         return run_app(args)
 
     parser.error(f"Unsupported command: {args.command}")
     return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

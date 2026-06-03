@@ -19,6 +19,13 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# Temporary UI prototypes
+/desktop/ui-prototype-resource-management/
+/desktop/app/node_modules/
+/desktop/app/dist/
+/desktop/app/build/
+/desktop/app/release/
+
 # Local-only project notes
 /AGENTS.md
 /docs/

@@ -1,12 +1,21 @@
 # Rim Data Analysis v1.0.0
 
-这是第一个面向普通用户使用流程整理的 v1.0 版本。
+这是第一个以 Electron 桌面端作为正式用户界面的 v1.0 版本。
 
 ## 发布内容
 
-- Windows 桌面应用：`RimDataAnalysis.exe`
-- 用户使用说明：`USER-GUIDE.txt`
-- 项目说明：`README.md`
+- Windows x64 桌面应用压缩包：`RimDataAnalysis-v1.0.0-windows-x64.zip`
+- 桌面主程序：`RimDataAnalysis.exe`
+- 内置 Python 本地计算后端：`resources/backend/rim-analysis-web-api.exe`
+- 用户说明：`README.md`、`USER-GUIDE.txt`
+
+## 构建产物
+
+```text
+desktop\app\release\RimDataAnalysis-v1.0.0-windows-x64.zip
+```
+
+用户解压后双击 `RimDataAnalysis.exe` 即可运行。发布包已经内置计算后端，普通用户不需要安装 Python 或 Node.js。
 
 ## 本地构建
 
@@ -16,11 +25,14 @@
 powershell -ExecutionPolicy Bypass -File .\scripts\build-windows-release.ps1 -Version 1.0.0
 ```
 
-构建产物：
+构建脚本会依次执行：
 
-```text
-dist\release\RimDataAnalysis-v1.0.0-windows.zip
-```
+- 安装 Python 开发依赖。
+- 运行 Python 测试。
+- 使用 PyInstaller 构建本地 API 后端 exe。
+- 安装 Electron 依赖。
+- 运行 Electron 类型检查。
+- 构建 Electron 桌面应用并压缩为 zip 发布包。
 
 ## v1.0 支持范围
 
@@ -28,14 +40,15 @@ dist\release\RimDataAnalysis-v1.0.0-windows.zip
 - 支持创建人物模板。
 - 支持选择武器、衣着、特性、特殊装备和植入体。
 - 支持设计单个或批量攻防场景。
-- 支持结果对比表和简要结论。
-- 支持资源管理、重命名、删除和重复场景清理。
+- 支持结果对比表。
+- 支持资源管理和删除后跨页面数据同步。
 
 ## v1.0 暂不支持
 
 - 暂不支持 Steam 创意工坊 Mod 数据分析。
 - 暂不支持 Combat Extended 等重写战斗系统的 Mod。
 - 暂不提供逐 tick 战斗模拟。
+- 暂未提供安装器和代码签名。
 
 ## 首次使用
 
@@ -54,4 +67,5 @@ E:\SteamLibrary\steamapps\common\RimWorld\Data
 
 - 第一次导入数据需要用户正确选择游戏目录。
 - 软件数据默认保存到 `%APPDATA%\RimDataAnalysis`。
-- 计算模型以原版规则为目标，但仍应视作分析工具输出。
+- 未签名发布包可能触发 Windows 安全提示。
+- 计算结果应视作游戏外分析工具输出。
